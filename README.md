@@ -22,8 +22,14 @@ Okteto inner loop
 - [ ] okteto manifests
 - [ ] integration test that creates a k8s namespace using in-cluster config
 
+Port webhook and dependencies
+
+Port initial clone
+
+Port Preview server
+
 Backlog
 
 - [ ] Docker image build infra in CI
 - [ ] Badge for docker image build
-- [ ] 
+- [ ] Look at codecov as alternative for coverlet
