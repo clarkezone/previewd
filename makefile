@@ -41,6 +41,8 @@ latest:
 
 .PHONY: lint
 lint:
+	revive $(shell go list ./...)
+	go vet $(shell go list ./...)
 	golangci-lint run
 
 .PHONY: precommit
