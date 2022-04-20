@@ -1,3 +1,4 @@
+// Package cmd contains commands
 /*
 Copyright © 2022 clarkezone
 
@@ -36,6 +37,10 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func DocError() {
+	fmt.Println("HellO")
 }
 
 func init() {
