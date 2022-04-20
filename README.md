@@ -8,7 +8,7 @@ Get basic app going
 
 - [x] Add coveralls badge
 - [x] License, Go Report Card, Build and Tests badges
-- [ ] Fix godocs badge
+- [x] Fix godocs badge
 - [ ] Version command including update to makefile
 - [ ] BasicServer command
 - [ ] Dockerfile including update to makefile to build image with version baked
