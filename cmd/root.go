@@ -39,10 +39,6 @@ func Execute() {
 	}
 }
 
-func DocError() {
-	fmt.Println("HellO")
-}
-
 func init() {
 	cobra.OnInitialize(initConfig)
 
