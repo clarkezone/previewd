@@ -12,7 +12,8 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [x] Version command including update to makefile
 
 In Progress
-- [ ] BasicServer command with cancelation
+
+- [ ] BasicServer command with cancellation
 - [ ] test coverage for BasicServer
 - [ ] Port provided by environment using viper + cobra
 - [ ] metrics for basicserver
