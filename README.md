@@ -4,31 +4,38 @@
 
 A daemon for managing rendering for static sites and blogs in kubernetes using jobs.
 
-Get basic app going
+# Get basic app going
 
 - [x] Add coveralls badge
 - [x] License, Go Report Card, Build and Tests badges
 - [x] Fix godocs badge
-- [ ] Version command including update to makefile
-- [ ] BasicServer command
+- [x] Version command including update to makefile
+
+In Progress
+- [ ] BasicServer command with cancelation
+- [ ] test coverage for BasicServer
+- [ ] Port provided by environment using viper + cobra
+- [ ] metrics for basicserver
+- [ ] logging with log levels for BasicServer
+
 - [ ] Dockerfile including update to makefile to build image with version baked
 - [ ] Metrics
 - [ ] Logging - log version at app start, log level settable from env vars
 - [ ] Ensure metrics and logs show up in prometheus
 
-Okteto inner loop
+# Okteto inner loop
 
 - [ ] k8s basic manifests
 - [ ] okteto manifests
 - [ ] integration test that creates a k8s namespace using in-cluster config
 
-Port webhook and dependencies
+# Port webhook and dependencies
 
-Port initial clone
+# Port initial clone
 
-Port Preview server
+# Port Preview server
 
-Backlog
+# Backlog
 
 - [ ] Docker image build infra in CI
 - [ ] Badge for docker image build
