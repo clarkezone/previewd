@@ -8,6 +8,7 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/clarkezone/previewd/cmd/testserver"
 	"github.com/spf13/cobra"
@@ -26,8 +27,13 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("testserver called")
 		//TODO: flag with default for port
+
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			message := fmt.Sprintf("Hello World")
+			w.Write([]byte(message))
+		})
+
 		bs.StartListen("")
 		//TODO: implement
 		bs.WaitforInterupt()
