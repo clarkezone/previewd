@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/clarkezone/previewd/cmd/testserver"
+	"github.com/clarkezone/previewd/pkg/testserver"
 	"github.com/spf13/cobra"
 )
 
