@@ -71,3 +71,12 @@ repos:
         language: system
         files: ^\.pre-commit-config\.yaml$|^codespell\.txt$
         require_serial: true
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: run golangci-lint
+        description: do the thing
+        entry: golangci-lint run --fix
+        types: [go]
+        language: golang
+        pass_filename: false
