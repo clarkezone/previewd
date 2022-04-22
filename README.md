@@ -13,16 +13,15 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 
 In Progress
 
-- [ ] BasicServer command with cancellation
+- [x] BasicServer command with cancellation
 - [ ] test coverage for BasicServer
 - [ ] Port provided by environment using viper + cobra
-- [ ] metrics for basicserver
-- [ ] logging with log levels for BasicServer
-
-- [ ] Dockerfile including update to makefile to build image with version baked
-- [ ] Metrics
-- [ ] Logging - log version at app start, log level settable from env vars
-- [ ] Ensure metrics and logs show up in prometheus
+- [ ] Dockerfile including port update to makefile to build image with version baked
+- [ ] metrics for basicserver in reusable way
+- [ ] Logging with log levels- log version at app start, log level settable from env vars
+- [ ] Ensure metrics and logs show up in prometheus on homelab
+- [ ] Docker image build infra in CI
+- [ ] Badge for docker image build
 
 # Okteto inner loop
 
@@ -38,6 +37,4 @@ In Progress
 
 # Backlog
 
-- [ ] Docker image build infra in CI
-- [ ] Badge for docker image build
 - [ ] Look at codecov as alternative for coverlet

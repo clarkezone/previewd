@@ -1,1 +1,18 @@
 mode: atomic
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:23.39,26.2 2 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:29.51,35.71 3 1
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:38.2,40.12 2 1
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:35.72,37.3 0 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:40.12,42.43 2 1
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:45.3,45.16 1 1
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:42.43,43.14 1 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:45.16,47.4 1 1
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:52.48,54.19 2 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:55.2,58.22 4 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:54.19,54.32 1 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:61.55,65.12 4 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:74.2,74.20 1 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:65.12,68.25 3 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:72.3,72.21 1 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:68.25,70.4 1 0
+github.com/clarkezone/previewd/cmd/testserver/basicserver.go:78.41,82.2 3 1

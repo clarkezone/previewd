@@ -26,17 +26,20 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		//TODO: flag with default for port
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			message := fmt.Sprintf("Hello World")
-			w.Write([]byte(message))
+			message := fmt.Sprintln("Hello World<BR>")
+			_, err := w.Write([]byte(message))
+			if err != nil {
+				panic(err)
+			}
 		})
 
 		bs.StartListen("")
 		//TODO: implement
-		bs.WaitforInterupt()
+		return bs.WaitforInterupt()
 	},
 }
 
