@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/clarkezone/previewd/pkg/testserver"
+	"github.com/clarkezone/previewd/pkg/basicserver"
 	"github.com/spf13/cobra"
 )
 
-var bs = testserver.CreateBasicServer()
+var bs = basicserver.CreateBasicServer()
 
 // testserverCmd represents the testserver command
 var testserverCmd = &cobra.Command{

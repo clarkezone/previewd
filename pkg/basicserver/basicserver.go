@@ -1,5 +1,5 @@
-// Package testserver contains a dummy server implementation for testing metrics and logging
-package testserver
+// Package basicserver contains a dummy server implementation for testing metrics and logging
+package basicserver
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/clarkezone/previewd/internal"
 )
 
 type cleanupfunc func()
@@ -38,7 +40,8 @@ func (bs *BasicServer) StartListen(secret string) {
 	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		// increment a counter for number of requests processed
 	})
-	bs.httpserver = &http.Server{Addr: ":8090"}
+
+	bs.httpserver = &http.Server{Addr: ":" + fmt.Sprint(internal.Port)}
 	// http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		err := bs.httpserver.ListenAndServe()

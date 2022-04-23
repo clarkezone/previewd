@@ -13,6 +13,7 @@ func Test_testserver(t *testing.T) {
 	gh := getHelloHandler()
 	gh(w, req)
 	res := w.Result()
+	//nolint
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
