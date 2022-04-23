@@ -31,7 +31,7 @@ func CreateBasicServer() *BasicServer {
 
 // StartListen Start listening for a connection
 func (bs *BasicServer) StartListen(secret string) {
-	log.Println("starting... basic server on :8090")
+	log.Println("starting... basic server on :", fmt.Sprint(internal.Port))
 
 	bs.exitchan = make(chan bool)
 	// prometheus.MustRegister(requestDuration)
