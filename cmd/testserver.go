@@ -29,18 +29,22 @@ to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		//TODO: flag with default for port
 
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			message := fmt.Sprintln("Hello World<BR>")
-			_, err := w.Write([]byte(message))
-			if err != nil {
-				panic(err)
-			}
-		})
+		http.HandleFunc("/", getHelloHandler())
 
 		bs.StartListen("")
 		//TODO: implement
 		return bs.WaitforInterupt()
 	},
+}
+
+func getHelloHandler() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		message := fmt.Sprintln("Hello World<BR>")
+		_, err := w.Write([]byte(message))
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func init() {

@@ -3,6 +3,7 @@ package testserver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ type BasicServer struct {
 	httpserver *http.Server
 	ctx        context.Context
 	cancel     context.CancelFunc
+	exitchan   chan (bool)
 }
 
 // CreateBasicServer Create BasicServer object and return
@@ -29,6 +31,7 @@ func CreateBasicServer() *BasicServer {
 func (bs *BasicServer) StartListen(secret string) {
 	log.Println("starting... basic server on :8090")
 
+	bs.exitchan = make(chan bool)
 	// prometheus.MustRegister(requestDuration)
 
 	bs.ctx, bs.cancel = context.WithCancel(context.Background())
@@ -44,12 +47,16 @@ func (bs *BasicServer) StartListen(secret string) {
 		}
 		defer func() {
 			log.Println("Webserver exited")
+			bs.exitchan <- true
 		}()
 	}()
 }
 
 // WaitforInterupt Wait for a sigterm event or for user to press control c when running interacticely
 func (bs *BasicServer) WaitforInterupt() error {
+	if bs.exitchan == nil {
+		return fmt.Errorf("server not started")
+	}
 	ch := make(chan struct{})
 	handleSig(func() { close(ch) })
 	log.Printf("Waiting for user to press control c or sig terminate\n")
@@ -76,7 +83,12 @@ func handleSig(cleanupwork cleanupfunc) chan struct{} {
 
 // Shutdown terminates the listening thread
 func (bs *BasicServer) Shutdown() error {
+	if bs.exitchan == nil {
+		return fmt.Errorf("server not started")
+	}
 	defer bs.ctx.Done()
 	defer bs.cancel()
-	return bs.httpserver.Shutdown(bs.ctx)
+	httpexit := bs.httpserver.Shutdown(bs.ctx)
+	<-bs.exitchan
+	return httpexit
 }
