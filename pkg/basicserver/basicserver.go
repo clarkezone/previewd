@@ -1,13 +1,16 @@
-// Package testserver contains a dummy server implementation for testing metrics and logging
-package testserver
+// Package basicserver contains a dummy server implementation for testing metrics and logging
+package basicserver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/clarkezone/previewd/internal"
 )
 
 type cleanupfunc func()
@@ -17,6 +20,7 @@ type BasicServer struct {
 	httpserver *http.Server
 	ctx        context.Context
 	cancel     context.CancelFunc
+	exitchan   chan (bool)
 }
 
 // CreateBasicServer Create BasicServer object and return
@@ -27,15 +31,17 @@ func CreateBasicServer() *BasicServer {
 
 // StartListen Start listening for a connection
 func (bs *BasicServer) StartListen(secret string) {
-	log.Println("starting... basic server on :8090")
+	log.Println("starting... basic server on :", fmt.Sprint(internal.Port))
 
+	bs.exitchan = make(chan bool)
 	// prometheus.MustRegister(requestDuration)
 
 	bs.ctx, bs.cancel = context.WithCancel(context.Background())
 	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		// increment a counter for number of requests processed
 	})
-	bs.httpserver = &http.Server{Addr: ":8090"}
+
+	bs.httpserver = &http.Server{Addr: ":" + fmt.Sprint(internal.Port)}
 	// http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		err := bs.httpserver.ListenAndServe()
@@ -44,12 +50,16 @@ func (bs *BasicServer) StartListen(secret string) {
 		}
 		defer func() {
 			log.Println("Webserver exited")
+			bs.exitchan <- true
 		}()
 	}()
 }
 
 // WaitforInterupt Wait for a sigterm event or for user to press control c when running interacticely
 func (bs *BasicServer) WaitforInterupt() error {
+	if bs.exitchan == nil {
+		return fmt.Errorf("server not started")
+	}
 	ch := make(chan struct{})
 	handleSig(func() { close(ch) })
 	log.Printf("Waiting for user to press control c or sig terminate\n")
@@ -76,7 +86,12 @@ func handleSig(cleanupwork cleanupfunc) chan struct{} {
 
 // Shutdown terminates the listening thread
 func (bs *BasicServer) Shutdown() error {
+	if bs.exitchan == nil {
+		return fmt.Errorf("server not started")
+	}
 	defer bs.ctx.Done()
 	defer bs.cancel()
-	return bs.httpserver.Shutdown(bs.ctx)
+	httpexit := bs.httpserver.Shutdown(bs.ctx)
+	<-bs.exitchan
+	return httpexit
 }

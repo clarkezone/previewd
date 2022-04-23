@@ -14,9 +14,9 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 In Progress
 
 - [x] BasicServer command with cancellation
-- [ ] Port provided by environment using viper + cobra
-- [ ] test coverage for BasicServer: extract hello handler and a a test
-- [ ] shutdown method blocks
+- [x] test coverage for BasicServer: extract hello handler and a a test
+- [x] shutdown method blocks
+- [x] Port provided by environment using viper + cobra
 - [ ] Dockerfile including port update to makefile to build image with version baked
 - [ ] metrics for basicserver in reusable way
 - [ ] Logging with log levels- log version at app start, log level settable from env vars

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/clarkezone/previewd/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -28,6 +29,9 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return internal.ValidateEnv()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -51,6 +55,12 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	rootCmd.PersistentFlags().IntVar(&internal.Port, internal.PortVar, viper.GetInt(internal.PortVar), "server port")
+	err := viper.BindPFlag(internal.PortVar, rootCmd.PersistentFlags().Lookup(internal.PortVar))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
