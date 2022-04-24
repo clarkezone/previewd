@@ -17,18 +17,23 @@ In Progress
 - [x] test coverage for BasicServer: extract hello handler and a a test
 - [x] shutdown method blocks
 - [x] Port provided by environment using viper + cobra
-- [ ] Dockerfile including port update to makefile to build image with version baked
-- [ ] metrics for basicserver in reusable way
+- [x] Dockerfile including port update to makefile to build image with version baked
+
 - [ ] Logging with log levels- log version at app start, log level settable from env vars
-- [ ] Ensure metrics and logs show up in prometheus on homelab
+  - [ ] log infra, call from tests, libt clean
+  - [ ] replace all logging with info, debug
 - [ ] Docker image build infra in CI
 - [ ] Badge for docker image build
+- [ ] metrics for basicserver in reusable way  
 
 # Okteto inner loop
 
-- [ ] k8s basic manifests
+- [ ] k8s basic manifests that can set log level
 - [ ] okteto manifests
 - [ ] integration test that creates a k8s namespace using in-cluster config
+- [ ] verify metrics and logging in prom on k8s in okteto
+- [ ] verify on picluster
+- [ ] snap branch for app tenplate
 
 # Port webhook and dependencies
 
