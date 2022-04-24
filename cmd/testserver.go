@@ -8,9 +8,11 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/clarkezone/previewd/pkg/basicserver"
+	"github.com/clarkezone/previewd/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +29,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		//TODO: flag with default for port
-
+		log.Printf("previewd version %v,%v started in testserver mode\n", config.VersionString, config.VersionHash)
 		http.HandleFunc("/", getHelloHandler())
 
 		bs.StartListen("")

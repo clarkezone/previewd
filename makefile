@@ -1,5 +1,6 @@
 ifeq ($(strip $(VERSION_STRING)),)
-VERSION_STRING := $(shell git rev-parse --short HEAD)
+VERSION_HASH := $(shell git rev-parse --short HEAD)
+VERSION_STRING := $(shell git describe --abbrev=0)
 endif
 
 BINDIR    := $(CURDIR)/bin
