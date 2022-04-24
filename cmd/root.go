@@ -67,9 +67,14 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	rootCmd.PersistentFlags().IntVar(&internal.Port, internal.PortVar, viper.GetInt(internal.PortVar), "server port")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	rootCmd.PersistentFlags().StringVar(&outputMode, "log-output", clarkezoneLog.TTYFormat, "output format for logs (tty, plain, json)")
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVar(&outputMode, "logoutput", clarkezoneLog.TTYFormat, "output format for logs (tty, plain, json)")
 	err := viper.BindPFlag(internal.PortVar, rootCmd.PersistentFlags().Lookup(internal.PortVar))
+	if err != nil {
+		panic(err)
+	}
+
+	err = viper.BindPFlag(internal.LogLevelVar, rootCmd.PersistentFlags().Lookup(internal.LogLevelVar))
 	if err != nil {
 		panic(err)
 	}
