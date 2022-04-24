@@ -12,7 +12,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Show previewd version",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("rk version %s hash %s\n", config.VersionString, config.VersionHash)
+		fmt.Printf("rk version:%s hash:%s\n", config.VersionString, config.VersionHash)
 		return nil
 	},
 }
