@@ -1,3 +1,4 @@
+// Package log contains logging functions
 package log
 
 import (
@@ -85,7 +86,7 @@ func Infof(format string, args ...interface{}) {
 	log.writer.Infof(format, args...)
 }
 
-// Success prints a message with the success symbol first, and the text in green
-func Success(format string, args ...interface{}) {
-	log.writer.Success(format, args...)
+// Successf prints a message with the success symbol first, and the text in green
+func Successf(format string, args ...interface{}) {
+	log.writer.Successf(format, args...)
 }

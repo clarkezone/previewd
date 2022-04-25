@@ -11,6 +11,7 @@ const (
 	// PortVar is name of environment variable containing port
 	PortVar     = "port"
 	defaultPort = 8090
+	// LogLevelVar is name of environment variable containing loglevel
 	LogLevelVar = "loglevel"
 )
 

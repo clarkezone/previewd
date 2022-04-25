@@ -33,7 +33,7 @@ func CreateBasicServer() *BasicServer {
 
 // StartListen Start listening for a connection
 func (bs *BasicServer) StartListen(secret string) {
-	clarkezoneLog.Success("starting... basic server on :%v", fmt.Sprint(internal.Port))
+	clarkezoneLog.Successf("starting... basic server on :%v", fmt.Sprint(internal.Port))
 
 	bs.exitchan = make(chan bool)
 	// prometheus.MustRegister(requestDuration)

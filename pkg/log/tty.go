@@ -1,3 +1,4 @@
+// Package log contains logging functions
 package log
 
 import (
@@ -37,8 +38,8 @@ func (*TTYWriter) Infof(format string, args ...interface{}) {
 	}
 }
 
-// Success prints a message with the success symbol first, and the text in green
-func (w *TTYWriter) Success(format string, args ...interface{}) {
+// Successf prints a message with the success symbol first, and the text in green
+func (w *TTYWriter) Successf(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	w.Fprintf(w.out.Out, "%s %s\n", coloredSuccessSymbol, greenString(format, args...))
 }
@@ -54,5 +55,4 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	// 		log.buf.WriteString("\n")
 	// 	}
 	// }
-
 }

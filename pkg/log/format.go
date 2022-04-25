@@ -1,10 +1,11 @@
+// Package log contains logging functions
 package log
 
 // ClarkezoneWriter implements the interface of the writers
 type ClarkezoneWriter interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
-	Success(format string, args ...interface{})
+	Successf(format string, args ...interface{})
 }
 
 const (
