@@ -1,6 +1,6 @@
 package log
 
-//ClarkezoneWriter implements the interface of the writers
+// ClarkezoneWriter implements the interface of the writers
 type ClarkezoneWriter interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
@@ -8,7 +8,7 @@ type ClarkezoneWriter interface {
 }
 
 const (
-	//TTYFormat represents a tty logger
+	// TTYFormat represents a tty logger
 	TTYFormat string = "tty"
 )
 

@@ -23,28 +23,28 @@ var log = &logger{
 }
 
 var (
-	redString = color.New(color.FgHiRed).SprintfFunc()
+	// redString = color.New(color.FgHiRed).SprintfFunc()
 
 	greenString = color.New(color.FgGreen).SprintfFunc()
 
-	yellowString = color.New(color.FgHiYellow).SprintfFunc()
+	// yellowString = color.New(color.FgHiYellow).SprintfFunc()
 
-	blueString = color.New(color.FgHiBlue).SprintfFunc()
+	// blueString = color.New(color.FgHiBlue).SprintfFunc()
 
-	errorSymbol        = " x "
-	coloredErrorSymbol = color.New(color.BgHiRed, color.FgBlack).Sprint(errorSymbol)
+	// errorSymbol = " x "
+	// coloredErrorSymbol = color.New(color.BgHiRed, color.FgBlack).Sprint(errorSymbol)
 
 	successSymbol        = " ✓ "
 	coloredSuccessSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(successSymbol)
 
-	informationSymbol        = " i "
-	coloredInformationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(informationSymbol)
+	// informationSymbol = " i "
+	// coloredInformationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(informationSymbol)
 
-	warningSymbol        = " ! "
-	coloredWarningSymbol = color.New(color.BgHiYellow, color.FgBlack).Sprint(warningSymbol)
+	// warningSymbol = " ! "
+	// coloredWarningSymbol = color.New(color.BgHiYellow, color.FgBlack).Sprint(warningSymbol)
 
-	questionSymbol        = " ? "
-	coloredQuestionSymbol = color.New(color.BgHiMagenta, color.FgBlack).Sprint(questionSymbol)
+	// questionSymbol = " ? "
+	// coloredQuestionSymbol = color.New(color.BgHiMagenta, color.FgBlack).Sprint(questionSymbol)
 
 	// InfoLevel is the json level for information
 	InfoLevel = "info"

@@ -7,13 +7,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//TTYWriter writes into a tty terminal
+// TTYWriter writes into a tty terminal
 type TTYWriter struct {
 	out  *logrus.Logger
 	file *logrus.Entry
 }
 
-//newTTYWriter creates a new ttyWriter
+// newTTYWriter creates a new ttyWriter
 func newTTYWriter(out *logrus.Logger, file *logrus.Entry) *TTYWriter {
 	return &TTYWriter{
 		out:  out,
