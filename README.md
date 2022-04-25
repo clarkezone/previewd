@@ -24,7 +24,7 @@ In Progress
   - [ ] replace all logging with info, debug
 - [ ] Docker image build infra in CI
 - [ ] Badge for docker image build
-- [ ] metrics for basicserver in reusable way  
+- [ ] metrics for basicserver in reusable way
 
 # Okteto inner loop
 
