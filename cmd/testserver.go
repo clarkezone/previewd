@@ -8,12 +8,13 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/clarkezone/previewd/pkg/basicserver"
 	"github.com/clarkezone/previewd/pkg/config"
 	"github.com/spf13/cobra"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 var bs = basicserver.CreateBasicServer()
@@ -29,7 +30,8 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Printf("previewd version %v,%v started in testserver mode\n", config.VersionString, config.VersionHash)
+		clarkezoneLog.Successf("previewd version %v,%v started in testserver mode\n",
+			config.VersionString, config.VersionHash)
 		http.HandleFunc("/", getHelloHandler())
 
 		bs.StartListen("")

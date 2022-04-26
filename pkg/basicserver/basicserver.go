@@ -11,6 +11,8 @@ import (
 	"syscall"
 
 	"github.com/clarkezone/previewd/internal"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 type cleanupfunc func()
@@ -31,11 +33,10 @@ func CreateBasicServer() *BasicServer {
 
 // StartListen Start listening for a connection
 func (bs *BasicServer) StartListen(secret string) {
-	log.Println("starting... basic server on :", fmt.Sprint(internal.Port))
+	clarkezoneLog.Successf("starting... basic server on :%v", fmt.Sprint(internal.Port))
 
 	bs.exitchan = make(chan bool)
 	// prometheus.MustRegister(requestDuration)
-
 	bs.ctx, bs.cancel = context.WithCancel(context.Background())
 	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		// increment a counter for number of requests processed
