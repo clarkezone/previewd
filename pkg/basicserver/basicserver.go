@@ -4,7 +4,6 @@ package basicserver
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -50,7 +49,7 @@ func (bs *BasicServer) StartListen(secret string) {
 			panic(err)
 		}
 		defer func() {
-			log.Println("Webserver exited")
+			// clarkezoneLog.Debug("Webserver exited")
 			bs.exitchan <- true
 		}()
 	}()
@@ -63,9 +62,9 @@ func (bs *BasicServer) WaitforInterupt() error {
 	}
 	ch := make(chan struct{})
 	handleSig(func() { close(ch) })
-	log.Printf("Waiting for user to press control c or sig terminate\n")
+	clarkezoneLog.Successf("Waiting for user to press control c or sig terminate\n")
 	<-ch
-	log.Printf("Terminate signal detected, closing job manager\n")
+	clarkezoneLog.Debugf("Terminate signal detected, closing job manager\n")
 	return bs.Shutdown()
 }
 
@@ -75,8 +74,9 @@ func handleSig(cleanupwork cleanupfunc) chan struct{} {
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-signalChan
-		log.Printf("\nhandleSig Received an interrupt, stopping services...\n")
+		clarkezoneLog.Debugf("\nhandleSig Received an interrupt, stopping services...\n")
 		if cleanupwork != nil {
+			clarkezoneLog.Debugf("")
 			cleanupwork()
 		}
 

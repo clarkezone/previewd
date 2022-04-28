@@ -4,6 +4,7 @@ package internal
 import (
 	"fmt"
 
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/spf13/viper"
 )
 
@@ -30,6 +31,7 @@ func init() {
 func ValidateEnv() error {
 	port := viper.GetInt(PortVar)
 	if port == 0 {
+		clarkezoneLog.Debugf("ValudateEnv() error port == 0")
 		return fmt.Errorf("bad port")
 	}
 	return nil

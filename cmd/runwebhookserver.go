@@ -6,9 +6,9 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 // runwebhookserverCmd represents the runwebhookserver command
@@ -22,7 +22,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("runwebhookserver called")
+		clarkezoneLog.Infof("runwebhookserver called")
 	},
 }
 

@@ -35,7 +35,6 @@ to quickly create a Cobra application.`,
 		http.HandleFunc("/", getHelloHandler())
 
 		bs.StartListen("")
-		//TODO: implement
 		return bs.WaitforInterupt()
 	},
 }
@@ -45,6 +44,7 @@ func getHelloHandler() func(w http.ResponseWriter, r *http.Request) {
 		message := fmt.Sprintln("Hello World<BR>")
 		_, err := w.Write([]byte(message))
 		if err != nil {
+			clarkezoneLog.Debugf("Failed to write bytes %v\n", err)
 			panic(err)
 		}
 	}

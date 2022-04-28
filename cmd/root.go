@@ -6,7 +6,6 @@ Copyright © 2022 clarkezone
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -102,6 +101,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		clarkezoneLog.Infof("Using config file:", viper.ConfigFileUsed())
 	}
 }
