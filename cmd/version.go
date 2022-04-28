@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"fmt"
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 
 	"github.com/clarkezone/previewd/pkg/config"
 	"github.com/spf13/cobra"
@@ -12,7 +12,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Show previewd version",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("rk version:%s hash:%s\n", config.VersionString, config.VersionHash)
+		clarkezoneLog.Infof("rk version:%s hash:%s\n", config.VersionString, config.VersionHash)
 		return nil
 	},
 }
