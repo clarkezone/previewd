@@ -12,6 +12,8 @@ import (
 
 	"github.com/clarkezone/previewd/pkg/basicserver"
 	"github.com/clarkezone/previewd/pkg/config"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/spf13/cobra"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
@@ -19,28 +21,36 @@ import (
 
 var bs = basicserver.CreateBasicServer()
 
-// testserverCmd represents the testserver command
-var testserverCmd = &cobra.Command{
-	Use:   "testserver",
-	Short: "Starts a test server to test logging and metrics",
-	Long: `Starts a listener that will
+var (
+	// testserverCmd represents the testserver command
+	testserverCmd = &cobra.Command{
+		Use:   "testserver",
+		Short: "Starts a test server to test logging and metrics",
+		Long: `Starts a listener that will
 and usage of using your command. For example:
 
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		clarkezoneLog.Successf("previewd version %v,%v started in testserver mode\n",
-			config.VersionString, config.VersionHash)
-		http.HandleFunc("/", getHelloHandler())
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clarkezoneLog.Successf("previewd version %v,%v started in testserver mode\n",
+				config.VersionString, config.VersionHash)
+			http.HandleFunc("/", getHelloHandler())
 
-		bs.StartListen("")
-		return bs.WaitforInterupt()
-	},
-}
+			bs.StartListen("")
+			return bs.WaitforInterupt()
+		},
+	}
+
+	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "previewd_testserver_totalops",
+		Help: "The total number of processed http requests for testserver",
+	})
+)
 
 func getHelloHandler() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		opsProcessed.Inc()
 		message := fmt.Sprintln("Hello World<BR>")
 		_, err := w.Write([]byte(message))
 		if err != nil {
