@@ -5,6 +5,8 @@ items:
     metadata:
       labels:
         app: previewdtestserver
+      annotations:
+        dev.okteto.com/auto-ingress: "true"
       name: previewd-service
     spec:
       ipFamilies:
