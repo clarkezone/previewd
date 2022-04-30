@@ -4,9 +4,9 @@
 
 A daemon for managing rendering for static sites and blogs in kubernetes using jobs.
 
-# Get basic skeleton app going
+# ~~Get basic skeleton app going~~
 
-[x] Badges, CI/CD, Test infra, Code Coverage, license, Linting, precommit, Dockfile, basic cli app with test server with basic logging and metrics
+- [x] Badges, CI/CD, Test infra, Code Coverage, license, Linting, precommit, Dockfile, basic cli app with test server with basic logging and metrics
 
 # Okteto inner loop
 
