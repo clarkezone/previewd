@@ -16,7 +16,6 @@ import (
 )
 
 var cfgFile string
-var logLevel string
 var outputMode string
 
 // rootCmd represents the base command when called without any subcommands
@@ -33,7 +32,7 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		clarkezoneLog.SetLevel(logLevel)
+		clarkezoneLog.SetLevel(internal.LogLevel)
 		clarkezoneLog.SetOutputFormat(outputMode)
 		clarkezoneLog.Infof("started %s", strings.Join(os.Args, " "))
 		return internal.ValidateEnv()
@@ -66,8 +65,8 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	rootCmd.PersistentFlags().IntVar(&internal.Port, internal.PortVar, viper.GetInt(internal.PortVar), "server port")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "loglevel", "l",
-		"warn", "amount of information outputted (debug, info, warn, error)")
+	rootCmd.PersistentFlags().StringVarP(&internal.LogLevel, internal.LogLevelVar, "l",
+		viper.GetString(internal.LogLevelVar), "amount of information outputted (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringVar(&outputMode, "logoutput", clarkezoneLog.TTYFormat,
 		"output format for logs (tty, plain, json)")
 	err := viper.BindPFlag(internal.PortVar, rootCmd.PersistentFlags().Lookup(internal.PortVar))
