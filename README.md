@@ -4,35 +4,17 @@
 
 A daemon for managing rendering for static sites and blogs in kubernetes using jobs.
 
-# Get basic app going
+# Get basic skeleton app going
 
-- [x] Add coveralls badge
-- [x] License, Go Report Card, Build and Tests badges
-- [x] Fix godocs badge
-- [x] Version command including update to makefile
-
-In Progress
-
-- [x] BasicServer command with cancellation
-- [x] test coverage for BasicServer: extract hello handler and a a test
-- [x] shutdown method blocks
-- [x] Port provided by environment using viper + cobra
-- [x] Dockerfile including port update to makefile to build image with version baked
-
-- [ ] Logging with log levels- log version at app start, log level settable from env vars
-  - [ ] log infra, call from tests, libt clean
-  - [ ] replace all logging with info, debug
-- [ ] Docker image build infra in CI
-- [ ] Badge for docker image build
-- [ ] metrics for basicserver in reusable way
+[x] Badges, CI/CD, Test infra, Code Coverage, license, Linting, precommit, Dockfile, basic cli app with test server with basic logging and metrics
 
 # Okteto inner loop
 
 - [ ] k8s basic manifests that can set log level
+- [ ] verify on picluster
 - [ ] okteto manifests
 - [ ] integration test that creates a k8s namespace using in-cluster config
 - [ ] verify metrics and logging in prom on k8s in okteto
-- [ ] verify on picluster
 - [ ] snap branch for app tenplate
 
 # Port webhook and dependencies
@@ -43,5 +25,6 @@ In Progress
 
 # Backlog
 
+- [ ] Badge for docker image build
 - [ ] Look at codecov as alternative for coverlet
 - [ ] precommit calls golangci-lint
