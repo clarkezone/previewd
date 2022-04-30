@@ -10,9 +10,9 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 
 # Okteto inner loop
 
-- [ ] k8s basic manifests that can set log level
-- [ ] verify on picluster
-- [ ] okteto manifests
+- [x] k8s basic manifests that can set log level
+- [x] verify on picluster
+- [x] okteto manifests
 - [ ] integration test that creates a k8s namespace using in-cluster config
 - [ ] verify metrics and logging in prom on k8s in okteto
 - [ ] snap branch for app tenplate

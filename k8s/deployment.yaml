@@ -25,11 +25,16 @@ spec:
         app: previewdtestserver
     spec:
       containers:
-        - image: registry.hub.docker.com/clarkezone/previewd:metrics
+        - image: registry.hub.docker.com/clarkezone/previewd:0.0.2
           imagePullPolicy: IfNotPresent
           name: previewd
+          env:
+            - name: PORT
+              value: "8080"
+            - name: LOGLEVEL
+              value: "debug"
           ports:
-            - containerPort: 8090
+            - containerPort: 8080
               protocol: TCP
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File

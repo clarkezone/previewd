@@ -32,5 +32,6 @@ dev:
       - .:/usr/src/app
     environment:
       - name=$USER
+        LOGLEVEL=debug
     forward:
       - 8080:80
