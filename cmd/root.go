@@ -21,12 +21,17 @@ var outputMode string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "previewd",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "previewd is a tool for generating previews of static sites using kubernetes jobs.",
+	Long: `previewd is a tool for generating previews of static sites using kubernetes jobs.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
+To install the completion script on zsh,
+ensure that .zshrc contains:
+  autoload -U compinit
+  compinit -i
+
+Then run the following:
+  sudo -- sh -c 'previewd completion zsh > /usr/local/share/zsh/site-functions/_previewd'
+
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
