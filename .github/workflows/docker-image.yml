@@ -47,9 +47,9 @@ jobs:
       - name: Branch name
         id: branch_name
         run: |
-          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
-          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags}
+          echo ::set-output name=SOURCE_HEADTAG::$(git tag --points-at HEAD)
+          echo ::set-output name=SOURCE_BRANCH::$(git rev-parse --abbrev-ref HEAD)
+          echo ::set-output name=SOURCE_HASH::$(git rev-parse --short HEAD)
           echo "Print all environment variables"
           env
       - name: Build and push
@@ -61,6 +61,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            BUILD_VERSION="1234567abcd"
-            BUILD_HASH="b0b0b0b0b0b0b0"
+            BUILD_HEADTAG=${{ steps.branch_name.outputs.SOURCE_HEADTAG }}
+            BUILD_BRANCH=${{ steps.branch_name.outputs.SOURCE_BRANCH }}
+            BUILD_HASH=${{ steps.branch_name.outputs.SOURCE_HASH }}
           #tags: clarkezone/previewd:${{ steps.branch_name.outputs.SOURCE_TAG}}
