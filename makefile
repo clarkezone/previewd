@@ -1,6 +1,22 @@
-ifeq ($(strip $(VERSION_STRING)),)
+ifeq ($(strip $(VERSION_HASH)),)
+MAIN_BRANCH := main
+# hash of current commit
 VERSION_HASH := $(shell git rev-parse --short HEAD)
-VERSION_STRING := $(shell git describe --abbrev=0)
+# tag matching current commit or empty
+HEAD_TAG := $(shell git tag --points-at HEAD)
+#name of branch
+BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
+endif
+
+#if we are on main and there is a tag pointing at head, use that for version else use branch name as version
+ifeq ($(BRANCH_NAME),$(MAIN_BRANCH))
+ifeq ($(strip $(HEAD_TAG)),)
+VERSION_STRING := $(BRANCH_NAME)
+else
+VERSION_STRING := $(HEAD_TAG)
+endif
+else
+VERSION_STRING := $(BRANCH_NAME)
 endif
 
 BINDIR    := $(CURDIR)/bin

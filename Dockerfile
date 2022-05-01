@@ -2,8 +2,9 @@
 #docker.io prefix required by podman
 # use podman build . --build-arg BUILD_VERSION="jikjikjik" --build-arg BUILD_HASH="0001100"
 FROM docker.io/golang:alpine as builder
-ARG BUILD_VERSION
+ARG BUILD_HEADTAG
 ARG BUILD_HASH
+ARG BUILD_BRANCH
 RUN mkdir /build
 WORKDIR /build
 COPY go.mod .
@@ -15,7 +16,7 @@ RUN go mod download
 COPY . .
 #RUN --mount=type=cache,target=/root/.cache make build
 run apk --no-cache add gcc build-base git
-run make build VERSION_STRING="$BUILD_VERSION" VERSION_HASH=$BUILD_HASH
+run make build HEAD_TAG="$BUILD_HEADTAG" VERSION_HASH=$BUILD_HASH BRANCH_NAME=$BUILD_BRANCH
 
 # test that that the build is good and app launches
 RUN /build/bin/previewd version
