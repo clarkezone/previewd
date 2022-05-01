@@ -58,6 +58,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: BUILD_VERSION="${{ SOURCE_TAG }}"
+          build-args: |
+            BUILD_VERSION="${{ SOURCE_TAG }}"
             BUILD_HASH="${{ GITHUB_SHA }}"
           #tags: clarkezone/previewd:${{ steps.branch_name.outputs.SOURCE_TAG}}
