@@ -1,5 +1,6 @@
-ifeq ($(strip $(VERSION_HASH)),)
 MAIN_BRANCH := main
+HEAD_BRANCH := HEAD
+ifeq ($(strip $(VERSION_HASH)),)
 # hash of current commit
 VERSION_HASH := $(shell git rev-parse --short HEAD)
 # tag matching current commit or empty
@@ -8,16 +9,25 @@ HEAD_TAG := $(shell git tag --points-at HEAD)
 BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
 endif
 
+VERSION_STRING := $(BRANCH_NAME)
 #if we are on main and there is a tag pointing at head, use that for version else use branch name as version
 ifeq ($(BRANCH_NAME),$(MAIN_BRANCH))
-ifeq ($(strip $(HEAD_TAG)),)
-VERSION_STRING := $(BRANCH_NAME)
-else
+$(info "match main")
+ifneq ($(strip $(HEAD_TAG)),)
 VERSION_STRING := $(HEAD_TAG)
+$(info    $(VERSION_STRING))
 endif
-else
-VERSION_STRING := $(BRANCH_NAME)
 endif
+
+#if we are on HEAD and there is a tag pointing at head, use that for version else use branch name as version
+ifeq ($(BRANCH_NAME),$(HEAD_BRANCH))
+$(info match head)
+ifneq ($(strip $(HEAD_TAG)),)
+VERSION_STRING := $(HEAD_TAG)
+$(info    $(version_string))
+endif
+endif
+
 
 BINDIR    := $(CURDIR)/bin
 PLATFORMS := linux/amd64/rk-Linux-x86_64 darwin/amd64/rk-Darwin-x86_64 windows/amd64/rk.exe linux/arm64/rk-Linux-arm64 darwin/arm64/rk-Darwin-arm64
