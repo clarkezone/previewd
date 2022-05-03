@@ -67,47 +67,8 @@ func CreateJob(clientset kubernetes.Interface,
 				ObjectMeta: metav1.ObjectMeta{},
 
 				Spec: apiv1.PodSpec{
-					Volumes: []apiv1.Volume{
-						{
-							Name: "blogsource",
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: sourcename,
-									ReadOnly:  true,
-								},
-							},
-						},
-						{
-							Name: "blogrender",
-							VolumeSource: apiv1.VolumeSource{
-								PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-									ClaimName: rendername,
-								},
-							},
-						},
-					},
-					Containers: []apiv1.Container{
-						apiv1.Container{
-							Name:            name,
-							Image:           image,
-							ImagePullPolicy: "Always",
-							//TODO: command and args optional
-							//Command:         command,
-							//Args:            args,
-							VolumeMounts: []apiv1.VolumeMount{
-								apiv1.VolumeMount{
-									Name:      "blogsource",
-									ReadOnly:  true,
-									MountPath: "/src",
-								},
-								apiv1.VolumeMount{
-									Name:      "blogrender",
-									ReadOnly:  false,
-									MountPath: "/site",
-								},
-							},
-						},
-					},
+					Volumes:       getVolumes(sourcename, rendername),
+					Containers:    getContainers(name, image),
 					RestartPolicy: apiv1.RestartPolicyNever,
 				},
 			},
@@ -125,6 +86,53 @@ func CreateJob(clientset kubernetes.Interface,
 	}
 	log.Printf("Created job %v.\n", result.GetObjectMeta().GetName())
 	return job, nil
+}
+
+func getVolumes(sourcename string, rendername string) []apiv1.Volume {
+	return []apiv1.Volume{
+		{
+			Name: "blogsource",
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: sourcename,
+					ReadOnly:  true,
+				},
+			},
+		},
+		{
+			Name: "blogrender",
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: rendername,
+				},
+			},
+		},
+	}
+}
+
+func getContainers(name string, image string) []apiv1.Container {
+	return []apiv1.Container{
+		{
+			Name:            name,
+			Image:           image,
+			ImagePullPolicy: "Always",
+			//TODO: command and args optional
+			//Command:         command,
+			//Args:            args,
+			VolumeMounts: []apiv1.VolumeMount{
+				{
+					Name:      "blogsource",
+					ReadOnly:  true,
+					MountPath: "/src",
+				},
+				{
+					Name:      "blogrender",
+					ReadOnly:  false,
+					MountPath: "/site",
+				},
+			},
+		},
+	}
 }
 
 func findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
