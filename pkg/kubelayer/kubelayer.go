@@ -1,3 +1,4 @@
+// Package kubelayer contains helpers for calling kube client
 package kubelayer
 
 import (
@@ -22,7 +23,12 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
-func PingApi(clientset kubernetes.Interface) {
+const (
+	jobttlsecondsafterfinished int32 = 1
+)
+
+// PingAPI tests if server is working
+func PingAPI(clientset kubernetes.Interface) {
 	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		panic(err.Error())
@@ -31,11 +37,14 @@ func PingApi(clientset kubernetes.Interface) {
 	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
 }
 
-// TODO: namespace, name, container image etc
-func CreateJob(clientset kubernetes.Interface, name string, namespace string, image string, command []string, args []string, always bool) (*batchv1.Job, error) {
-	//TODO use default namespace if empty
-	//TODO switch tests to call with empty
-	//FIX
+// CreateJob creates a new job resource
+func CreateJob(clientset kubernetes.Interface,
+	name string,
+	namespace string, image string, command []string,
+	args []string, always bool) (*batchv1.Job, error) {
+	// TODO use default namespace if empty
+	// TODO switch tests to call with empty
+	// FIX
 	jobsClient := clientset.BatchV1().Jobs(namespace)
 
 	sourcename, rendername, err := findpvnames(clientset, namespace)
@@ -44,16 +53,16 @@ func CreateJob(clientset kubernetes.Interface, name string, namespace string, im
 		return nil, err
 	}
 
-	//TODO hook up pull policy
+	// TODO hook up pull policy
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
-			//TODO: parameterize
+			// TODO: parameterize
 			Namespace: namespace,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit:            int32Ptr(1),
-			TTLSecondsAfterFinished: int32Ptr(10),
+			TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{},
 
@@ -132,13 +141,13 @@ func findpvnames(clientset kubernetes.Interface, namespace string) (string, stri
 			rendername = item.ObjectMeta.Name
 		}
 		if strings.Contains(item.ObjectMeta.Name, "source") {
-
 			sourcename = item.ObjectMeta.Name
 		}
 	}
 	return sourcename, rendername, nil
 }
 
+// DeleteJob deletes an existing job resource
 func DeleteJob(clientset kubernetes.Interface, name string) error {
 	jobsClient := clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
 	meta := metav1.DeleteOptions{

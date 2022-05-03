@@ -10,7 +10,7 @@ import (
 func TestApi(t *testing.T) {
 	t.Logf("TestApi")
 	clientset := fake.NewSimpleClientset()
-	PingApi(clientset)
+	PingAPI(clientset)
 }
 
 func TestCreateJobKubeLayer(t *testing.T) {
@@ -18,6 +18,6 @@ func TestCreateJobKubeLayer(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 	_, err := CreateJob(clientset, "testns", "", "", nil, nil, false)
 	if err != nil {
-		panic(errors.New("Create job failed."))
+		panic(errors.New("create job failed"))
 	}
 }
