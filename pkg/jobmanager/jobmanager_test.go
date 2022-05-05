@@ -17,7 +17,8 @@ func SkipCI(t *testing.T) {
 	}
 }
 
-func RunTestJob(completechannel chan struct{}, deletechannel chan struct{}, t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) {
+func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
+	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) {
 	SkipCI(t)
 	jm, err := Newjobmanager(false, "testns")
 	if err != nil {
@@ -53,7 +54,7 @@ func TestCreateAndSucceed(t *testing.T) {
 		if completechannel != nil && typee == Update && job.Status.Active == 0 && job.Status.Failed > 0 {
 			log.Printf("Error detected")
 			close(completechannel)
-			completechannel = nil //avoid double close
+			completechannel = nil // avoid double close
 		}
 
 		if typee == Delete {
@@ -95,7 +96,7 @@ func TestCreateAndFail(t *testing.T) {
 		if completechannel != nil && typee == Update && job.Status.Active == 0 && job.Status.Failed > 0 {
 			log.Printf("Error detected")
 			close(completechannel)
-			completechannel = nil //avoid double close
+			completechannel = nil // avoid double close
 		}
 
 		if typee == Delete {
@@ -124,8 +125,8 @@ func TestCreateAndFail(t *testing.T) {
 	//TODO:             Conditional log statements
 	//TODO:             Environment variable
 	//TODO: flag for job to autodelete
-	//TODO: test that verifies auto delete
-	//TODO: Ensure error if job with same name already exists
+	// TODO: test that verifies auto delete
+	// TODO: Ensure error if job with same name already exists
 }
 
 func TestGetConfig(t *testing.T) {
@@ -135,8 +136,8 @@ func TestGetConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("unable to create config")
 	}
-	//TODO flag for job to autodelete
-	//TODO wait for error exit
+	// TODO flag for job to autodelete
+	// TODO wait for error exit
 }
 
 func TestCreateJobExitsError(t *testing.T) {

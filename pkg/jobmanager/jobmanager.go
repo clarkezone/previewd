@@ -1,3 +1,4 @@
+// Package jobmanager is an abstraction for scheduling and managing jobs
 package jobmanager
 
 import (
@@ -16,37 +17,43 @@ import (
 	kl "github.com/clarkezone/previewd/pkg/kubelayer"
 )
 
+// ResourseStateType is used in the notification callback
 type ResourseStateType int
 
 const (
+	// Create indicates a job was just created
 	Create = 0
+	// Update indicates a job was just updated
 	Update
+	// Delete indicates a job was just deleted
 	Delete
 )
 
 type jobnotifier func(*batchv1.Job, ResourseStateType)
 
+// Jobmanager enables scheduling and querying of jobs
 type Jobmanager struct {
-	current_config    *rest.Config
-	current_clientset kubernetes.Interface
-	ctx               context.Context
-	cancel            context.CancelFunc
-	jobnotifiers      map[string]jobnotifier
+	currentConfig    *rest.Config
+	currentClientset kubernetes.Interface
+	ctx              context.Context
+	cancel           context.CancelFunc
+	jobnotifiers     map[string]jobnotifier
 }
 
+// Newjobmanager is a factory method to create a new instanace of a job manager
 func Newjobmanager(incluster bool, namespace string) (*Jobmanager, error) {
 	jm, err := newjobmanagerinternal(incluster)
 	if err != nil {
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(jm.current_config)
+	clientset, err := kubernetes.NewForConfig(jm.currentConfig)
 	if err != nil {
 		return nil, err
 	}
-	jm.current_clientset = clientset
+	jm.currentClientset = clientset
 
-	//TODO only if we want watchers
+	// TODO only if we want watchers
 	created := jm.startWatchers(namespace)
 	if created {
 		return jm, nil
@@ -60,9 +67,9 @@ func newjobmanagerwithclient(internal bool, clientset kubernetes.Interface, name
 		return nil, err
 	}
 
-	jm.current_clientset = clientset
+	jm.currentClientset = clientset
 
-	//TODO only if we want watchers
+	// TODO only if we want watchers
 	created := jm.startWatchers(namespace)
 	if created {
 		return jm, nil
@@ -82,19 +89,18 @@ func newjobmanagerinternal(incluster bool) (*Jobmanager, error) {
 	if config == nil {
 		return nil, err
 	}
-	jm.current_config = config
+	jm.currentConfig = config
 	return &jm, nil
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
 	// We will create an informer that writes added pods to a channel.
-	//	pods := make(chan *v1.Pod, 1)
-	//informers := informers.NewSharedInformerFactory(jm.current_clientset, 0) // when watching in global scope, we need clusterrole / clusterrolebinding not role / rolebinding in the rbac setup
 	var info informers.SharedInformerFactory
 	if namespace == "" {
-		info = informers.NewSharedInformerFactory(jm.current_clientset, 0) // when watching in global scope, we need clusterrole / clusterrolebinding not role / rolebinding in the rbac setup
+		// when watching in global scope, we need clusterrole / clusterrolebinding not role / rolebinding in the rbac setup
+		info = informers.NewSharedInformerFactory(jm.currentClientset, 0)
 	} else {
-		info = informers.NewSharedInformerFactoryWithOptions(jm.current_clientset, 0, informers.WithNamespace(namespace))
+		info = informers.NewSharedInformerFactoryWithOptions(jm.currentClientset, 0, informers.WithNamespace(namespace))
 	}
 	podInformer := info.Core().V1().Pods().Informer()
 	podInformer.AddEventHandler(&cache.ResourceEventHandlerFuncs{
@@ -158,22 +164,26 @@ func (jm *Jobmanager) startWatchers(namespace string) bool {
 	return true
 }
 
-func (jm *Jobmanager) CreateJob(name string, namespace string, image string, command []string, args []string, notifier jobnotifier) (*batchv1.Job, error) {
+// CreateJob makes a new job
+func (jm *Jobmanager) CreateJob(name string, namespace string,
+	image string, command []string, args []string, notifier jobnotifier) (*batchv1.Job, error) {
 	//TODO: if job exists, delete it
-	job, err := kl.CreateJob(jm.current_clientset, name, namespace, image, command, args, true)
+	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true)
 	if err != nil {
 		return nil, err
 	}
 	if notifier != nil {
-		jm.jobnotifiers[string(job.Name)] = notifier
+		jm.jobnotifiers[job.Name] = notifier
 	}
 	return job, nil
 }
 
+// DeleteJob deletes a job
 func (jm *Jobmanager) DeleteJob(name string) error {
-	return kl.DeleteJob(jm.current_clientset, name)
+	return kl.DeleteJob(jm.currentClientset, name)
 }
 
+// GetConfig returns a config based on incluster, out of cluster
 func GetConfig(incluster bool) (*rest.Config, error) {
 	var config *rest.Config
 	var err error
@@ -181,13 +191,14 @@ func GetConfig(incluster bool) (*rest.Config, error) {
 		config, err = rest.InClusterConfig()
 	} else {
 		kubepath := "/users/jamesclarke/.kube/config"
-		var kubeconfig *string = &kubepath
+		var kubeconfig = &kubepath
 		// use the current context in kubeconfig
 		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	}
 	return config, err
 }
 
+// Close cancels all jobmanager go routines
 func (jm *Jobmanager) Close() {
 	jm.cancel()
 }
