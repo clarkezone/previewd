@@ -15,7 +15,12 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 # Port webhook and dependencies
 
 - [ ] port all packages
-- [ ] integration test that calls job creation code that uses out of cluster mode
+  - [x] JobManager
+  - [x] Kubelayer
+  - [ ] local resource manager
+  - [ ] port to new logging
+  - [ ] port env to viper
+- [ ] integration test that calls job creation code that uses out of cluster mode based on main function
 - [ ] update integration test to work in okteto with auto-detect
 - [ ] make command to call integration test
 - [ ] github action to configure okteto connection and call integration test

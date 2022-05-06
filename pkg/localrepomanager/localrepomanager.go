@@ -9,7 +9,7 @@ import (
 	"runtime"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"temp.com/JekyllBlogPreview/jobmanager"
+	"github.com/clarkezone/previewd/pkg/jobmanager"
 )
 
 const (
