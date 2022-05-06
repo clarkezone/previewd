@@ -117,7 +117,30 @@ func (jm *Jobmanager) startWatchers(namespace string) bool {
 
 	jobInformer := info.Batch().V1().Jobs().Informer()
 
-	jobInformer.AddEventHandler(&cache.ResourceEventHandlerFuncs{
+	jobInformer.AddEventHandler(jm.getJobEventHandlers())
+	err := jobInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		// your code goes here
+		log.Printf("Bed Shat %v", err.Error())
+		jm.cancel()
+	})
+	if err != nil {
+		panic(err)
+	}
+	info.Start(jm.ctx.Done())
+
+	// Ensuring that the informer goroutine have warmed up and called List before
+	// we send any events to it.
+	result := cache.WaitForCacheSync(jm.ctx.Done(), podInformer.HasSynced)
+	result2 := cache.WaitForCacheSync(jm.ctx.Done(), jobInformer.HasSynced)
+	if !result || !result2 {
+		log.Printf("Bed Shat")
+		return false
+	}
+	return true
+}
+
+func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
+	return &cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			job := obj.(*batchv1.Job)
 			log.Printf("Job added: %s/%s uid:%v", job.Namespace, job.Name, job.UID)
@@ -142,26 +165,7 @@ func (jm *Jobmanager) startWatchers(namespace string) bool {
 				val(newjob, Update)
 			}
 		},
-	})
-	err := jobInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
-		// your code goes here
-		log.Printf("Bed Shat %v", err.Error())
-		jm.cancel()
-	})
-	if err != nil {
-		panic(err)
 	}
-	info.Start(jm.ctx.Done())
-
-	// Ensuring that the informer goroutine have warmed up and called List before
-	// we send any events to it.
-	result := cache.WaitForCacheSync(jm.ctx.Done(), podInformer.HasSynced)
-	result2 := cache.WaitForCacheSync(jm.ctx.Done(), jobInformer.HasSynced)
-	if !result || !result2 {
-		log.Printf("Bed Shat")
-		return false
-	}
-	return true
 }
 
 // CreateJob makes a new job
