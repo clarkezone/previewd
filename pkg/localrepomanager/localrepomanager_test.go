@@ -125,6 +125,55 @@ func TestLRMCheckout(t *testing.T) {
 	}
 }
 
+func TestLRMSwitchBranch(t *testing.T) {
+	repo, dirname, branch, _, _ := Getenv(t)
+
+	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
+	if err != nil {
+		t.Fatalf("create localrepomanager failed")
+	}
+
+	err = lrm.InitialClone(repo, "")
+	if err != nil {
+		t.Fatalf("error in initial clonse")
+	}
+
+	err = lrm.SwitchBranch(branch)
+	if err != nil {
+		t.Fatalf("switch branch failed")
+	}
+
+	err = os.RemoveAll(dirname)
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
+}
+
+func TestLRMSwitchBranchBadBranch(t *testing.T) {
+	//nolint
+	repo, dirname, _, _, _ := Getenv(t)
+
+	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
+	if err != nil {
+		t.Fatalf("create localrepomanager failed")
+	}
+
+	err = lrm.InitialClone(repo, "")
+	if err != nil {
+		t.Fatalf("error in initial clonse")
+	}
+
+	err = lrm.SwitchBranch("Doesn't exist")
+	if err == nil {
+		t.Fatalf("bad branch not detected")
+	}
+
+	err = os.RemoveAll(dirname)
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
+}
+
 // TODO unregister
 
 // func TestLRMSwitchBranch(t *testing.T) {

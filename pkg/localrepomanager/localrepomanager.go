@@ -90,7 +90,7 @@ func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 
 	re, err := clone(repo, lrm.repoSourceDir)
 	if err != nil {
-		clarkezoneLog.Debugf("Error in initial clone: %v\n", err.Error())
+		clarkezoneLog.Errorf("EXITING: Fatal Error in initial clone: %v\n", err.Error())
 		os.Exit(1)
 	}
 	lrm.repo = re
@@ -105,7 +105,8 @@ func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 
 		err := lrm.repo.checkout(branch)
 		if err != nil {
-			return fmt.Errorf("checkout failed: %v", err.Error())
+			clarkezoneLog.Errorf("LocalRepoManager::Switchbranch %v", err)
+			return err
 		}
 
 		lrm.currentBranch = branch
@@ -113,7 +114,8 @@ func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 
 	err := lrm.repo.pull(branch)
 	if err != nil {
-		return fmt.Errorf("pull failed: %v", err.Error())
+		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch %v", err)
+		return err
 	}
 	return nil
 }
