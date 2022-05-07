@@ -17,15 +17,17 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [ ] port all packages
   - [x] JobManager
   - [x] Kubelayer
-  - [ ] local resource manager
-  - [ ] port to new logging
-  - [ ] port env to viper
-- [ ] integration test that calls job creation code that uses out of cluster mode based on main function
+  - [x] local resource manager
+  - [x] port lrm to new logging
+  - [ ] port kubelayer to new logging
+  - [ ] port webhook listener
+- [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
 - [ ] update integration test to work in okteto with auto-detect
 - [ ] make command to call integration test
 - [ ] github action to configure okteto connection and call integration test
 - [ ] can code coverage reflect integration test
 - [ ] verify metrics and logging in prom on k8s in okteto
+- [ ] port main function into cobra commands
 
 # Port initial clone
 
