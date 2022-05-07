@@ -27,9 +27,10 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [ ] github action to configure okteto connection and call integration test
 - [ ] can code coverage reflect integration test
 - [ ] verify metrics and logging in prom on k8s in okteto
-- [ ] port main function into cobra commands
 
 # Port initial clone
+
+- [ ] port main function into cobra commands
 
 # Port Preview server
 
