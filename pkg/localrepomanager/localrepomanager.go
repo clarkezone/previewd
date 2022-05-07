@@ -93,7 +93,7 @@ func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 		fmt.Printf(" with no authentication.\n")
 	}
 
-	re, err := clone(repo, lrm.repoSourceDir, repopat)
+	re, err := clone(repo, lrm.repoSourceDir)
 	if err != nil {
 		fmt.Printf("Error in initial clone: %v\n", err.Error())
 		os.Exit(1)

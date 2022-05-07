@@ -45,7 +45,7 @@ func TestCloneNoAuth(t *testing.T) {
 		t.Error()
 	}
 
-	_, err = clone(reponame, dirName, "")
+	_, err = clone(reponame, dirName)
 
 	if err != nil {
 		t.Error()
@@ -72,43 +72,54 @@ func TestCloneNoAuth(t *testing.T) {
 	}
 }
 
-// func TestPullSameBranch(t *testing.T) {
-// 	//_, dirname, branch := Getenv()
-// 	reponame, dirname, _ := Getenv()
-// 	os.RemoveAll(dirname)
+func TestPullSameBranch(t *testing.T) {
+	//nolint
+	reponame, dirname, _, _, _ := Getenv()
+	const branch = "debugsinglepull"
+	err := os.RemoveAll(dirname)
+	if err != nil {
+		t.Error()
+	}
 
-// 	repo, err := clone(reponame, dirname)
-// 	//repo, err := open(dirname)
-// 	if err != nil {
-// 		log.Fatal("open failed")
-// 	}
+	repo, err := clone(reponame, dirname)
+	if err != nil {
+		log.Fatal("clone failed")
+	}
 
-// 	err = repo.checkout("debugsinglepull")
+	err = repo.checkout(branch)
+	if err != nil {
+		log.Fatal("checkout failed")
+	}
 
-// 	//err = repo.pull(branch)
-// 	if err != nil {
-// 		log.Fatal("pull failed")
-// 	}
-// }
+	err = repo.pull(branch)
+	if err != nil {
+		log.Fatal("pull failed")
+	}
+}
 
-// func TestPullSameBranchPull(t *testing.T) {
-// 	_, dirname, _ := Getenv()
-// 	//reponame, dirname, _ := Getenv()
-// 	//os.RemoveAll(dirname)
+func TestPullSameBranchPull(t *testing.T) {
+	//nolint
+	_, dirname, _, _, _ := Getenv()
+	err := os.RemoveAll(dirname)
+	if err != nil {
+		log.Fatal("dir clean failed")
+	}
 
-// 	//repo, err := clone(reponame, dirname)
-// 	repo, err := open(dirname)
-// 	if err != nil {
-// 		log.Fatal("open failed")
-// 	}
+	repo, err := clone(reponame, dirname)
+	if err != nil {
+		log.Fatal("clone failed")
+	}
 
-// 	//err = repo.checkout("debugsinglepull")
+	err = repo.checkout("debugsinglepull")
+	if err != nil {
+		log.Fatal("pull failed")
+	}
 
-// 	err = repo.pull("debugsinglepull")
-// 	if err != nil {
-// 		log.Fatal("pull failed")
-// 	}
-// }
+	err = repo.pull("debugsinglepull")
+	if err != nil {
+		log.Fatal("pull failed")
+	}
+}
 
 func TestPullBranch(t *testing.T) {
 	t.Logf("TestPullBranch")
@@ -119,7 +130,7 @@ func TestPullBranch(t *testing.T) {
 		log.Fatal("TestPullBranch: removeallfailed")
 	}
 
-	repo, err := clone(reponame, dirName, "")
+	repo, err := clone(reponame, dirName)
 	if err != nil {
 		log.Fatal("TestPullBranch: clone failed")
 	}
@@ -163,7 +174,7 @@ func TestCloneAuth(t *testing.T) {
 		log.Fatal("TestCloneAuth: removeallfailed")
 	}
 
-	_, err = clone(secureproname, dirname, pw)
+	_, err = secureClone(secureproname, dirname, pw)
 	// repo, err := clone(reponame, dirname, "", pw)
 	if err != nil {
 		log.Fatal("TestCloneAuth: clone failed")

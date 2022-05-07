@@ -16,42 +16,57 @@ type gitlayer struct {
 	pat  string
 }
 
-func clone(repo string, localfolder string, pw string) (*gitlayer, error) {
+func clone(repo string, localfolder string) (*gitlayer, error) {
 	gl := &gitlayer{}
 
-	var clo *git.CloneOptions
-
-	if pw == "" {
-		clo = &git.CloneOptions{
-			URL:      repo,
-			Progress: os.Stdout,
-		}
-	} else {
-		clo = &git.CloneOptions{
-			URL:      repo,
-			Progress: os.Stdout,
-			Auth: &http.BasicAuth{
-				Username: "abc123", // yes, this can be anything except an empty string
-				Password: pw,
-			},
-		}
+	var clo = &git.CloneOptions{
+		URL:      repo,
+		Progress: os.Stdout,
 	}
 
+	err := doClone(gl, localfolder, clo)
+	if err != nil {
+		return nil, err
+	}
+
+	return gl, nil
+}
+
+func doClone(gl *gitlayer, localfolder string, clo *git.CloneOptions) error {
 	re, err := git.PlainClone(localfolder, false, clo)
 	if err != nil {
 		fmt.Printf("Plainclone %v\n", err.Error())
-		return nil, err
+		return err
 	}
 	gl.repo = re
 
 	wt, err := gl.repo.Worktree()
 	if err != nil {
 		fmt.Printf("Get worktree %v\n", err.Error())
-		return nil, err
+		return err
 	}
 	gl.wt = wt
-	gl.pat = pw
 
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func secureClone(repo string, localfolder string, pw string) (*gitlayer, error) {
+	gl := &gitlayer{}
+
+	gl.pat = pw
+	var clo = &git.CloneOptions{
+		URL:      repo,
+		Progress: os.Stdout,
+		Auth: &http.BasicAuth{
+			Username: "abc123", // yes, this can be anything except an empty string
+			Password: pw,
+		},
+	}
+
+	err := doClone(gl, localfolder, clo)
 	if err != nil {
 		return nil, err
 	}
