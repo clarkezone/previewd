@@ -1,5 +1,12 @@
 on: [push, pull_request]
 
+env: 
+    TEST_GITLAYER_REPO_NOAUTHURL: ${{ secrets.TEST_GITLAYER_REPO_NOAUTHURL }}
+    TEST_GITLAYER_LOCALDIR: ${{ secrets.TEST_GITLAYER_LOCALDIR }}
+    TEST_GITLAYER_BRANCHSWITCH: ${{ secrets.TEST_GITLAYER_BRANCHSWITCH }}
+    TEST_GITLAYER_SECURE_REPO_NOAUTH: ${{ secrets.TEST_GITLAYER_SECURE_REPO_NOAUTH }}
+    TEST_GITLAYER_SECURECLONEPWNAME: ${{ secrets.TEST_GITLAYER_SECURECLONEPWNAME }}
+
 name: run tests
 jobs:
   lint:
@@ -33,6 +40,12 @@ jobs:
       - name: install compare tool
         run: go install github.com/homeport/dyff/cmd/dyff@latest
       - name: Run tests
+        env: 
+          TEST_GITLAYER_REPO_NOAUTHURL: ${{ secrets.TEST_GITLAYER_REPO_NOAUTHURL }}
+          TEST_GITLAYER_LOCALDIR: ${{ secrets.TEST_GITLAYER_LOCALDIR }}
+          TEST_GITLAYER_BRANCHSWITCH: ${{ secrets.TEST_GITLAYER_BRANCHSWITCH }}
+          TEST_GITLAYER_SECURE_REPO_NOAUTH: ${{ secrets.TEST_GITLAYER_SECURE_REPO_NOAUTH }}
+          TEST_GITLAYER_SECURECLONEPWNAME: ${{ secrets.TEST_GITLAYER_SECURECLONEPWNAME }}
         run: go test -v -covermode=count ./...
 
   coverage:
