@@ -60,7 +60,6 @@ func clone(repo string, localfolder string, pw string) (*gitlayer, error) {
 }
 
 func (gl *gitlayer) checkout(branch string) error {
-
 	remote, err := gl.repo.Remote("origin")
 	if err != nil {
 		fmt.Printf("Get remote %v\n", err.Error())

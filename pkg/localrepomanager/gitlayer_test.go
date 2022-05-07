@@ -12,13 +12,14 @@ const (
 	testlocaldirname     = "TEST_JEKPREV_LOCALDIR"
 	testbranchswitchname = "TEST_JEKPREV_BRANCHSWITCH"
 	testsecurereponame   = "TEST_JEKPREV_SECURE_REPO_NOAUTH"
-	testsecureclonepw    = "TEST_JEKPREV_SECURECLONEPW"
+	//nolint
+	testsecureclonepwname = "TEST_JEKPREV_SECURECLONEPWNAME"
 )
 
-//configure environment variables by:
+// configure environment variables by:
 // 1. command palette: open settings (json)
 // 2. append the following
-//"go.testEnvVars": {
+// "go.testEnvVars": {
 //	"TEST_JEKPREV_REPO_NOAUTH": "https://URL:
 //	"TEST_JEKPREV_LOCALDIR": "/tmp/jekpreview_test",
 //	"TEST_JEKPREV_BRANCHSWITCH": "testbranch",
@@ -36,23 +37,27 @@ func TestAllReadEnvTest(t *testing.T) {
 
 func TestCloneNoAuth(t *testing.T) {
 	t.Logf("TestCloneNoAuth")
-	reponame, dirname, _, _, _ := Getenv()
+	//nolint
+	reponame, dirName, _, _, _ := Getenv()
 
-	os.RemoveAll(dirname)
+	err := os.RemoveAll(dirName)
+	if err != nil {
+		t.Error()
+	}
 
-	_, err := clone(reponame, dirname, "")
+	_, err = clone(reponame, dirName, "")
 
 	if err != nil {
 		t.Error()
 	}
 
-	if _, err := os.Stat(dirname); err != nil {
+	if _, err := os.Stat(dirName); err != nil {
 		if os.IsNotExist(err) {
 			log.Fatalf("Clone failed %v\n", err.Error())
 		}
 	}
 
-	infos, err := ioutil.ReadDir(dirname)
+	infos, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		log.Fatalf("TestCloneNoAuth: clone failed %v", err.Error())
 	}
@@ -61,7 +66,10 @@ func TestCloneNoAuth(t *testing.T) {
 		log.Fatalf("TestCloneNoAuth: clone failed expected %v, found %v", 9, len(infos))
 	}
 
-	os.RemoveAll(dirname)
+	err = os.RemoveAll(dirName)
+	if err != nil {
+		t.Error()
+	}
 }
 
 // func TestPullSameBranch(t *testing.T) {
@@ -104,11 +112,14 @@ func TestCloneNoAuth(t *testing.T) {
 
 func TestPullBranch(t *testing.T) {
 	t.Logf("TestPullBranch")
-	reponame, dirname, branch, _, _ := Getenv()
+	reponame, dirName, branch, _, _ := Getenv()
 
-	os.RemoveAll(dirname)
+	err := os.RemoveAll(dirName)
+	if err != nil {
+		log.Fatal("TestPullBranch: removeallfailed")
+	}
 
-	repo, err := clone(reponame, dirname, "")
+	repo, err := clone(reponame, dirName, "")
 	if err != nil {
 		log.Fatal("TestPullBranch: clone failed")
 	}
@@ -123,31 +134,37 @@ func TestPullBranch(t *testing.T) {
 		log.Fatal("pull failed")
 	}
 
-	infos, err := ioutil.ReadDir(dirname)
+	infos, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		log.Fatal("pull failed")
 	}
 
-	if len(infos) != 12 { //One extra for .git
+	if len(infos) != 12 { // One extra for .git
 		log.Fatalf("pull failed file mismatch error expected 9 found %v", len(infos))
 	}
 
-	os.RemoveAll(dirname)
+	err = os.RemoveAll(dirName)
+	if err != nil {
+		log.Fatal("TestPullBranch: removeallfailed")
+	}
 }
 
 func TestCloneAuth(t *testing.T) {
 	t.Logf("TestCloneAuth")
 	_, dirname, _, secureproname, pw := Getenv()
-	//reponame, dirname, branch, pw := Getenv()
+	// reponame, dirname, branch, pw := Getenv()
 
 	if pw == "unused" {
 		return
 	}
 
-	os.RemoveAll(dirname)
+	err := os.RemoveAll(dirname)
+	if err != nil {
+		log.Fatal("TestCloneAuth: removeallfailed")
+	}
 
-	_, err := clone(secureproname, dirname, pw)
-	//repo, err := clone(reponame, dirname, "", pw)
+	_, err = clone(secureproname, dirname, pw)
+	// repo, err := clone(reponame, dirname, "", pw)
 	if err != nil {
 		log.Fatal("TestCloneAuth: clone failed")
 	}
@@ -167,11 +184,14 @@ func TestCloneAuth(t *testing.T) {
 		log.Fatal("pull failed")
 	}
 
-	if len(infos) != 3 { //One extra for .git
+	if len(infos) != 3 { // One extra for .git
 		log.Fatalf("pull failed file mismatch error")
 	}
 
-	os.RemoveAll(dirname)
+	err = os.RemoveAll(dirname)
+	if err != nil {
+		log.Fatal("TestCloneAuth: removeallfailed")
+	}
 }
 
 func Getenv() (string, string, string, string, string) {
@@ -179,6 +199,6 @@ func Getenv() (string, string, string, string, string) {
 	localdr := os.Getenv(testlocaldirname)
 	testbranchswitch := os.Getenv(testbranchswitchname)
 	reposecure := os.Getenv(testsecurereponame)
-	secureclonepw := os.Getenv(testsecureclonepw)
+	secureclonepw := os.Getenv(testsecureclonepwname)
 	return repo, localdr, testbranchswitch, reposecure, secureclonepw
 }

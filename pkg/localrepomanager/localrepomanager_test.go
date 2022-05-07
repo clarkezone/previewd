@@ -23,7 +23,10 @@ func TestSourceDir(t *testing.T) {
 		t.Fatalf("Incorrect source dir")
 	}
 
-	os.RemoveAll("test")
+	err := os.RemoveAll("test")
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
 }
 
 func TestCreateLocalRepoManager(t *testing.T) {
@@ -39,18 +42,22 @@ func TestCreateLocalRepoManager(t *testing.T) {
 		t.Fatalf("Directory didn't get created")
 	}
 
-	os.RemoveAll("test")
+	err = os.RemoveAll("test")
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
 }
 
 func TestLegalizeBranchName(t *testing.T) {
+	const branchname = "foo"
 	lrm := CreateLocalRepoManager("test", nil, true, nil)
-	result := lrm.legalizeBranchName("foo")
-	if result != "foo" {
+	result := lrm.legalizeBranchName(branchname)
+	if result != branchname {
 		t.Fatalf("result incorrect")
 	}
 
 	result = lrm.legalizeBranchName("f-o-o")
-	if result != "foo" {
+	if result != branchname {
 		t.Fatalf("result incorrect")
 	}
 
@@ -59,7 +66,10 @@ func TestLegalizeBranchName(t *testing.T) {
 		t.Fatalf("result incorrect")
 	}
 
-	os.RemoveAll("test")
+	err := os.RemoveAll("test")
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
 }
 
 func TestGetCurrentBranchRender(t *testing.T) {
@@ -76,11 +86,15 @@ func TestGetCurrentBranchRender(t *testing.T) {
 		t.Fatalf("Directory didn't get created")
 	}
 
-	os.RemoveAll("test")
+	err = os.RemoveAll("test")
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
 }
 
 func TestLRMCheckout(t *testing.T) {
 	SkipCI(t)
+	//nolint
 	repo, dirname, _, _, _ := Getenv()
 
 	lrm := CreateLocalRepoManager(dirname, nil, true, nil)
@@ -89,7 +103,10 @@ func TestLRMCheckout(t *testing.T) {
 		t.Fatalf("error in initial clonse")
 	}
 
-	os.RemoveAll(dirname)
+	err = os.RemoveAll(dirname)
+	if err != nil {
+		t.Fatalf("unable to remove dirs")
+	}
 }
 
 // TODO unregister
@@ -111,7 +128,7 @@ func TestLRMCheckout(t *testing.T) {
 // 	os.RemoveAll(dirname)
 // }
 
-//func TestLRMSwitchBranchBackToMain(t *testing.T) {
+//  func TestLRMSwitchBranchBackToMain(t *testing.T) {
 //	_, dirname, branch, secureRepo, pat := getenv()
 //
 //	sharemgn := createShareManager()
