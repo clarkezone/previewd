@@ -53,6 +53,7 @@ install-tools:
 
 .PHONY: test
 test:
+	./scripts/setenv.sh
 	go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration-actions

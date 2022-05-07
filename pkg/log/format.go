@@ -6,6 +6,7 @@ type ClarkezoneWriter interface {
 	Debugf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Successf(format string, args ...interface{})
+	Errorf(format string, args ...interface{})
 }
 
 const (
