@@ -33,7 +33,7 @@ jobs:
       - name: install compare tool
         run: go install github.com/homeport/dyff/cmd/dyff@latest
       - name: Run tests
-        run: go test -v -covermode=count
+        run: go test -v -covermode=count ./...
 
   coverage:
     runs-on: ubuntu-latest
