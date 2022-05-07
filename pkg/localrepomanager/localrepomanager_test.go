@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-var lrm *LocalRepoManager
-
 func SkipCI(t *testing.T) {
 	if os.Getenv("TEST_JEKPREV_TESTLOCALK8S") == "" {
 		t.Skip("Skipping K8slocaltest")
@@ -15,7 +13,10 @@ func SkipCI(t *testing.T) {
 }
 
 func TestSourceDir(t *testing.T) {
-	lrm = CreateLocalRepoManager("test", nil, true, nil)
+	lrm, err := CreateLocalRepoManager("test", nil, true, nil)
+	if err != nil {
+		t.Fatalf("CreateLRM failed %v", err)
+	}
 
 	res := lrm.getSourceDir()
 
@@ -23,16 +24,19 @@ func TestSourceDir(t *testing.T) {
 		t.Fatalf("Incorrect source dir")
 	}
 
-	err := os.RemoveAll("test")
+	err = os.RemoveAll("test")
 	if err != nil {
 		t.Fatalf("unable to remove dirs")
 	}
 }
 
 func TestCreateLocalRepoManager(t *testing.T) {
-	_ = CreateLocalRepoManager("test", nil, true, nil)
+	_, err := CreateLocalRepoManager("test", nil, true, nil)
+	if err != nil {
+		t.Fatalf("create localrepomanager failed")
+	}
 
-	_, err := ioutil.ReadDir("test")
+	_, err = ioutil.ReadDir("test")
 	if err != nil {
 		t.Fatalf("Directory didn't get created")
 	}
@@ -50,7 +54,10 @@ func TestCreateLocalRepoManager(t *testing.T) {
 
 func TestLegalizeBranchName(t *testing.T) {
 	const branchname = "foo"
-	lrm := CreateLocalRepoManager("test", nil, true, nil)
+	lrm, err := CreateLocalRepoManager("test", nil, true, nil)
+	if err != nil {
+		t.Fatalf("create localrepomanager failed")
+	}
 	result := lrm.legalizeBranchName(branchname)
 	if result != branchname {
 		t.Fatalf("result incorrect")
@@ -66,22 +73,28 @@ func TestLegalizeBranchName(t *testing.T) {
 		t.Fatalf("result incorrect")
 	}
 
-	err := os.RemoveAll("test")
+	err = os.RemoveAll("test")
 	if err != nil {
 		t.Fatalf("unable to remove dirs")
 	}
 }
 
 func TestGetCurrentBranchRender(t *testing.T) {
-	lrm := CreateLocalRepoManager("test", nil, true, nil)
+	lrm, err := CreateLocalRepoManager("test", nil, true, nil)
+	if err != nil {
+		t.Fatalf("create localrepomanager failed")
+	}
 
-	dir := lrm.getRenderDir()
+	dir, err := lrm.getRenderDir()
+	if err != nil {
+		t.Fatalf("getrenderdir failed")
+	}
 
 	if dir != "test/master" {
 		t.Fatalf("Wrong name")
 	}
 
-	_, err := ioutil.ReadDir("test/master")
+	_, err = ioutil.ReadDir("test/master")
 	if err != nil {
 		t.Fatalf("Directory didn't get created")
 	}
@@ -93,12 +106,15 @@ func TestGetCurrentBranchRender(t *testing.T) {
 }
 
 func TestLRMCheckout(t *testing.T) {
-	SkipCI(t)
 	//nolint
-	repo, dirname, _, _, _ := Getenv()
+	repo, dirname, _, _, _ := Getenv(t)
 
-	lrm := CreateLocalRepoManager(dirname, nil, true, nil)
-	err := lrm.InitialClone(repo, "")
+	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
+	if err != nil {
+		t.Fatalf("create localrepomanager failed")
+	}
+
+	err = lrm.InitialClone(repo, "")
 	if err != nil {
 		t.Fatalf("error in initial clonse")
 	}

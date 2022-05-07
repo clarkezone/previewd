@@ -90,3 +90,8 @@ func Infof(format string, args ...interface{}) {
 func Successf(format string, args ...interface{}) {
 	log.writer.Successf(format, args...)
 }
+
+// Errorf writes a error-level log with a format
+func Errorf(format string, args ...interface{}) {
+	log.writer.Errorf(format, args...)
+}

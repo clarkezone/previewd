@@ -44,6 +44,14 @@ func (w *TTYWriter) Successf(format string, args ...interface{}) {
 	w.Fprintf(w.out.Out, "%s %s\n", coloredSuccessSymbol, greenString(format, args...))
 }
 
+// Errorf writes a error-level log with a format
+func (*TTYWriter) Errorf(format string, args ...interface{}) {
+	log.out.Errorf(format, args...)
+	if log.file != nil {
+		log.file.Errorf(format, args...)
+	}
+}
+
 // Fprintf prints a line with format
 func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)

@@ -5,55 +5,67 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	testreponame         = "TEST_JEKPREV_REPO_NOAUTH"
-	testlocaldirname     = "TEST_JEKPREV_LOCALDIR"
-	testbranchswitchname = "TEST_JEKPREV_BRANCHSWITCH"
-	testsecurereponame   = "TEST_JEKPREV_SECURE_REPO_NOAUTH"
+	testreponame         = "TEST_GITLAYER_REPO_NOAUTHURL"
+	testlocaldirname     = "TEST_GITLAYER_LOCALDIR"
+	testbranchswitchname = "TEST_GITLAYER_BRANCHSWITCH"
+	testsecurereponame   = "TEST_GITLAYER_SECURE_REPO_NOAUTH"
 	//nolint
-	testsecureclonepwname = "TEST_JEKPREV_SECURECLONEPWNAME"
+	testsecureclonepwname = "TEST_GITLAYER_SECURECLONEPWNAME"
 )
 
 // configure environment variables by:
 // 1. command palette: open settings (json)
 // 2. append the following
-// "go.testEnvVars": {
-//	"TEST_JEKPREV_REPO_NOAUTH": "https://URL:
-//	"TEST_JEKPREV_LOCALDIR": "/tmp/jekpreview_test",
-//	"TEST_JEKPREV_BRANCHSWITCH": "testbranch",
-//	"TEST_JEKPREV_SECURE_REPO_NOAUTH": "https://",
-//	"TEST_JEKPREV_SECURECLONEPW": "unused",
-//  },
+// "go.testEnvFile": "/home/james/.previewd_test.env",
+// 3. contents of file
+// TEST_GITLAYER_REPO_NOAUTHURL="https:/"
+// TEST_GITLAYER_LOCALDIR=""
+// TEST_GITLAYER_BRANCHSWITCH=""
+// TEST_GITLAYER_SECURE_REPO_NOAUTH=""
+// TEST_GITLAYER_SECURECLONEPW=""
+// TEST_GITLAYER_TESTLOCALK8S=""
+
+// TestMain initizlie all tests
+func TestMain(m *testing.M) {
+	clarkezoneLog.Init(logrus.DebugLevel)
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestAllReadEnvTest(t *testing.T) {
 	t.Logf("TestAllReadEnvTest")
-	repo, localdr, testbranchswitch, _, _ := Getenv()
+	repo, localdr, testbranchswitch, _, _ := Getenv(t)
 	if repo == "" || localdr == "" || testbranchswitch == "" {
-		log.Fatalf("Test environment variables not configured")
+		t.Fatalf("Test environment variables not configured repo:%v, localdr:%v, testbranchswitch:%v,\n",
+			repo, localdr, testbranchswitch)
 	}
 }
 
 func TestCloneNoAuth(t *testing.T) {
 	t.Logf("TestCloneNoAuth")
 	//nolint
-	reponame, dirName, _, _, _ := Getenv()
+	reponame, dirName, _, _, _ := Getenv(t)
 
 	err := os.RemoveAll(dirName)
 	if err != nil {
-		t.Error()
+		t.Fatalf("Dir already exists")
 	}
 
 	_, err = clone(reponame, dirName)
 
 	if err != nil {
-		t.Error()
+		t.Fatalf("Clone failed %v", err)
 	}
 
 	if _, err := os.Stat(dirName); err != nil {
 		if os.IsNotExist(err) {
-			log.Fatalf("Clone failed %v\n", err.Error())
+			t.Fatalf("Clone failed %v no files were copied", err)
 		}
 	}
 
@@ -68,62 +80,13 @@ func TestCloneNoAuth(t *testing.T) {
 
 	err = os.RemoveAll(dirName)
 	if err != nil {
-		t.Error()
-	}
-}
-
-func TestPullSameBranch(t *testing.T) {
-	//nolint
-	reponame, dirname, _, _, _ := Getenv()
-	const branch = "debugsinglepull"
-	err := os.RemoveAll(dirname)
-	if err != nil {
-		t.Error()
-	}
-
-	repo, err := clone(reponame, dirname)
-	if err != nil {
-		log.Fatal("clone failed")
-	}
-
-	err = repo.checkout(branch)
-	if err != nil {
-		log.Fatal("checkout failed")
-	}
-
-	err = repo.pull(branch)
-	if err != nil {
-		log.Fatal("pull failed")
-	}
-}
-
-func TestPullSameBranchPull(t *testing.T) {
-	//nolint
-	_, dirname, _, _, _ := Getenv()
-	err := os.RemoveAll(dirname)
-	if err != nil {
-		log.Fatal("dir clean failed")
-	}
-
-	repo, err := clone(reponame, dirname)
-	if err != nil {
-		log.Fatal("clone failed")
-	}
-
-	err = repo.checkout("debugsinglepull")
-	if err != nil {
-		log.Fatal("pull failed")
-	}
-
-	err = repo.pull("debugsinglepull")
-	if err != nil {
-		log.Fatal("pull failed")
+		t.Fatalf("Unable to remove dir %v", err)
 	}
 }
 
 func TestPullBranch(t *testing.T) {
 	t.Logf("TestPullBranch")
-	reponame, dirName, branch, _, _ := Getenv()
+	reponame, dirName, branch, _, _ := Getenv(t)
 
 	err := os.RemoveAll(dirName)
 	if err != nil {
@@ -150,8 +113,9 @@ func TestPullBranch(t *testing.T) {
 		log.Fatal("pull failed")
 	}
 
-	if len(infos) != 12 { // One extra for .git
-		log.Fatalf("pull failed file mismatch error expected 9 found %v", len(infos))
+	const expectedcount = 22
+	if len(infos) != expectedcount { // One extra for .git
+		log.Fatalf("pull failed file mismatch error expected %v found %v", expectedcount, len(infos))
 	}
 
 	err = os.RemoveAll(dirName)
@@ -160,56 +124,60 @@ func TestPullBranch(t *testing.T) {
 	}
 }
 
-func TestCloneAuth(t *testing.T) {
-	t.Logf("TestCloneAuth")
-	_, dirname, _, secureproname, pw := Getenv()
-	// reponame, dirname, branch, pw := Getenv()
+// func TestCloneAuth(t *testing.T) {
+// 	t.Logf("TestCloneAuth")
+// 	_, dirname, _, secureproname, pw := Getenv()
+// 	// reponame, dirname, branch, pw := Getenv()
+//
+// 	if pw == "unused" {
+// 		return
+// 	}
+//
+// 	err := os.RemoveAll(dirname)
+// 	if err != nil {
+// 		log.Fatal("TestCloneAuth: removeallfailed")
+// 	}
+//
+// 	_, err = secureClone(secureproname, dirname, pw)
+// 	// repo, err := clone(reponame, dirname, "", pw)
+// 	if err != nil {
+// 		log.Fatal("TestCloneAuth: clone failed")
+// 	}
+//
+// 	// err = repo.checkout(branch)
+// 	// if err != nil {
+// 	// 	log.Fatal("checkout failed")
+// 	// }
+//
+// 	// err = repo.pull(branch)
+// 	// if err != nil {
+// 	// 	log.Fatal("pull failed")
+// 	// }
+//
+// 	infos, err := ioutil.ReadDir(dirname)
+// 	if err != nil {
+// 		log.Fatal("pull failed")
+// 	}
+//
+// 	if len(infos) != 3 { // One extra for .git
+// 		log.Fatalf("pull failed file mismatch error")
+// 	}
+//
+// 	err = os.RemoveAll(dirname)
+// 	if err != nil {
+// 		log.Fatal("TestCloneAuth: removeallfailed")
+// 	}
+// }
 
-	if pw == "unused" {
-		return
-	}
-
-	err := os.RemoveAll(dirname)
-	if err != nil {
-		log.Fatal("TestCloneAuth: removeallfailed")
-	}
-
-	_, err = secureClone(secureproname, dirname, pw)
-	// repo, err := clone(reponame, dirname, "", pw)
-	if err != nil {
-		log.Fatal("TestCloneAuth: clone failed")
-	}
-
-	// err = repo.checkout(branch)
-	// if err != nil {
-	// 	log.Fatal("checkout failed")
-	// }
-
-	// err = repo.pull(branch)
-	// if err != nil {
-	// 	log.Fatal("pull failed")
-	// }
-
-	infos, err := ioutil.ReadDir(dirname)
-	if err != nil {
-		log.Fatal("pull failed")
-	}
-
-	if len(infos) != 3 { // One extra for .git
-		log.Fatalf("pull failed file mismatch error")
-	}
-
-	err = os.RemoveAll(dirname)
-	if err != nil {
-		log.Fatal("TestCloneAuth: removeallfailed")
-	}
-}
-
-func Getenv() (string, string, string, string, string) {
+func Getenv(t *testing.T) (string, string, string, string, string) {
 	repo := os.Getenv(testreponame)
 	localdr := os.Getenv(testlocaldirname)
 	testbranchswitch := os.Getenv(testbranchswitchname)
 	reposecure := os.Getenv(testsecurereponame)
 	secureclonepw := os.Getenv(testsecureclonepwname)
+	if repo == "" || localdr == "" || testbranchswitch == "" {
+		t.Fatalf("Test environment variables not configured repo:%v, localdr:%v, testbranchswitch:%v,\n",
+			repo, localdr, testbranchswitch)
+	}
 	return repo, localdr, testbranchswitch, reposecure, secureclonepw
 }

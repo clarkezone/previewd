@@ -8,6 +8,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/go-git/go-git/v5/plumbing"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 type gitlayer struct {
@@ -17,6 +19,7 @@ type gitlayer struct {
 }
 
 func clone(repo string, localfolder string) (*gitlayer, error) {
+	clarkezoneLog.Debugf("gitlayer::clone repo:%v localfolder:%v", repo, localfolder)
 	gl := &gitlayer{}
 
 	var clo = &git.CloneOptions{
@@ -26,6 +29,7 @@ func clone(repo string, localfolder string) (*gitlayer, error) {
 
 	err := doClone(gl, localfolder, clo)
 	if err != nil {
+		clarkezoneLog.Errorf("gitlayer::clone doclone failed with %v", err)
 		return nil, err
 	}
 
@@ -35,14 +39,14 @@ func clone(repo string, localfolder string) (*gitlayer, error) {
 func doClone(gl *gitlayer, localfolder string, clo *git.CloneOptions) error {
 	re, err := git.PlainClone(localfolder, false, clo)
 	if err != nil {
-		fmt.Printf("Plainclone %v\n", err.Error())
+		clarkezoneLog.Errorf("Plainclone %v\n", err.Error())
 		return err
 	}
 	gl.repo = re
 
 	wt, err := gl.repo.Worktree()
 	if err != nil {
-		fmt.Printf("Get worktree %v\n", err.Error())
+		clarkezoneLog.Errorf("Get worktree %v\n", err.Error())
 		return err
 	}
 	gl.wt = wt
@@ -53,26 +57,26 @@ func doClone(gl *gitlayer, localfolder string, clo *git.CloneOptions) error {
 	return nil
 }
 
-func secureClone(repo string, localfolder string, pw string) (*gitlayer, error) {
-	gl := &gitlayer{}
-
-	gl.pat = pw
-	var clo = &git.CloneOptions{
-		URL:      repo,
-		Progress: os.Stdout,
-		Auth: &http.BasicAuth{
-			Username: "abc123", // yes, this can be anything except an empty string
-			Password: pw,
-		},
-	}
-
-	err := doClone(gl, localfolder, clo)
-	if err != nil {
-		return nil, err
-	}
-
-	return gl, nil
-}
+// func secureClone(repo string, localfolder string, pw string) (*gitlayer, error) {
+// 	gl := &gitlayer{}
+//
+// 	gl.pat = pw
+// 	var clo = &git.CloneOptions{
+// 		URL:      repo,
+// 		Progress: os.Stdout,
+// 		Auth: &http.BasicAuth{
+// 			Username: "abc123", // yes, this can be anything except an empty string
+// 			Password: pw,
+// 		},
+// 	}
+//
+// 	err := doClone(gl, localfolder, clo)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return gl, nil
+// }
 
 func (gl *gitlayer) checkout(branch string) error {
 	remote, err := gl.repo.Remote("origin")
