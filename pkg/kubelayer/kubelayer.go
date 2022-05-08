@@ -3,8 +3,6 @@ package kubelayer
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"strings"
 
 	"k8s.io/client-go/kubernetes"
@@ -12,15 +10,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//
-	// Uncomment to load all auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth"
-	//
-	// Or uncomment to load specific auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 const (
@@ -34,7 +25,7 @@ func PingAPI(clientset kubernetes.Interface) {
 		panic(err.Error())
 	}
 
-	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
+	clarkezoneLog.Infof("There are %d pods in the cluster\n", len(pods.Items))
 }
 
 // CreateJob creates a new job resource
@@ -45,11 +36,17 @@ func CreateJob(clientset kubernetes.Interface,
 	// TODO use default namespace if empty
 	// TODO switch tests to call with empty
 	// FIX
+
+	clarkezoneLog.Debugf("CreateJob called with name %v namespace %v image %v command %v args %v always %v",
+		name, namespace, image, command, args, always)
+
 	jobsClient := clientset.BatchV1().Jobs(namespace)
 
 	sourcename, rendername, err := findpvnames(clientset, namespace)
+	clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
 
 	if err != nil {
+		clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
 		return nil, err
 	}
 
@@ -82,9 +79,10 @@ func CreateJob(clientset kubernetes.Interface,
 	}
 	result, err := jobsClient.Create(context.TODO(), job, metav1.CreateOptions{})
 	if err != nil {
+		clarkezoneLog.Errorf("CreateJob: jobsClient.Create failed %v", err)
 		return nil, err
 	}
-	log.Printf("Created job %v.\n", result.GetObjectMeta().GetName())
+	clarkezoneLog.Infof("Created job %v.\n", result.GetObjectMeta().GetName())
 	return job, nil
 }
 

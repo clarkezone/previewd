@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	kl "github.com/clarkezone/previewd/pkg/kubelayer"
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 // ResourseStateType is used in the notification callback
@@ -42,6 +43,7 @@ type Jobmanager struct {
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
 func Newjobmanager(incluster bool, namespace string) (*Jobmanager, error) {
+	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", incluster, namespace)
 	jm, err := newjobmanagerinternal(incluster)
 	if err != nil {
 		return nil, err
@@ -49,19 +51,25 @@ func Newjobmanager(incluster bool, namespace string) (*Jobmanager, error) {
 
 	clientset, err := kubernetes.NewForConfig(jm.currentConfig)
 	if err != nil {
+		clarkezoneLog.Errorf("unable to create new clientset for config:%v", err)
 		return nil, err
 	}
 	jm.currentClientset = clientset
 
 	// TODO only if we want watchers
+	clarkezoneLog.Debugf("Starting watchers")
 	created := jm.startWatchers(namespace)
 	if created {
+		clarkezoneLog.Debugf("watchers sarted correctly")
 		return jm, nil
 	}
+	clarkezoneLog.Debugf("watchers failed to start correctly")
 	return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
 }
 
 func newjobmanagerwithclient(internal bool, clientset kubernetes.Interface, namespace string) (*Jobmanager, error) {
+	clarkezoneLog.Debugf("newjobmanagerwithclient called with incluster:%v, clientset:%v, namespace:%v",
+		internal, clientset, namespace)
 	jm, err := newjobmanagerinternal(internal)
 	if err != nil {
 		return nil, err
@@ -74,10 +82,12 @@ func newjobmanagerwithclient(internal bool, clientset kubernetes.Interface, name
 	if created {
 		return jm, nil
 	}
+	clarkezoneLog.Debugf("watchers failed to start correctly")
 	return nil, fmt.Errorf("unable to create jobmanaer; startwatchers failed")
 }
 
 func newjobmanagerinternal(incluster bool) (*Jobmanager, error) {
+	clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", incluster)
 	jm := Jobmanager{}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,6 +104,7 @@ func newjobmanagerinternal(incluster bool) (*Jobmanager, error) {
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
+	clarkezoneLog.Debugf("startWatchers called with incluster:%v", namespace)
 	// We will create an informer that writes added pods to a channel.
 	var info informers.SharedInformerFactory
 	if namespace == "" {
@@ -120,10 +131,11 @@ func (jm *Jobmanager) startWatchers(namespace string) bool {
 	jobInformer.AddEventHandler(jm.getJobEventHandlers())
 	err := jobInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
 		// your code goes here
-		log.Printf("Bed Shat %v", err.Error())
+		clarkezoneLog.Errorf("watcher errorhandler caught error: %v", err.Error())
 		jm.cancel()
 	})
 	if err != nil {
+		clarkezoneLog.Errorf("Unable to set watcher error handler with %v, aborting", err)
 		panic(err)
 	}
 	info.Start(jm.ctx.Done())
@@ -133,7 +145,7 @@ func (jm *Jobmanager) startWatchers(namespace string) bool {
 	result := cache.WaitForCacheSync(jm.ctx.Done(), podInformer.HasSynced)
 	result2 := cache.WaitForCacheSync(jm.ctx.Done(), jobInformer.HasSynced)
 	if !result || !result2 {
-		log.Printf("Bed Shat")
+		clarkezoneLog.Errorf("Waitforcachesync failed")
 		return false
 	}
 	return true
@@ -143,14 +155,14 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 	return &cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			job := obj.(*batchv1.Job)
-			log.Printf("Job added: %s/%s uid:%v", job.Namespace, job.Name, job.UID)
+			clarkezoneLog.Infof("Job added: %s/%s uid:%v", job.Namespace, job.Name, job.UID)
 			if val, ok := jm.jobnotifiers[job.Name]; ok {
 				val(job, Create)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			job := obj.(*batchv1.Job)
-			log.Printf("Job deleted: %s/%s uid:%v", job.Namespace, job.Name, job.UID)
+			clarkezoneLog.Infof("Job deleted: %s/%s uid:%v", job.Namespace, job.Name, job.UID)
 			if val, ok := jm.jobnotifiers[job.Name]; ok {
 				val(job, Delete)
 				delete(jm.jobnotifiers, job.Name)
@@ -159,7 +171,7 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 		UpdateFunc: func(oldobj interface{}, newobj interface{}) {
 			oldjob := oldobj.(*batchv1.Job)
 			newjob := newobj.(*batchv1.Job)
-			log.Printf("Job updated: %s/%s status:%v uid:%v", oldjob.Namespace, oldjob.Name, newjob.Status, newjob.UID)
+			clarkezoneLog.Infof("Job updated: %s/%s status:%v uid:%v", oldjob.Namespace, oldjob.Name, newjob.Status, newjob.UID)
 
 			if val, ok := jm.jobnotifiers[newjob.Name]; ok {
 				val(newjob, Update)
@@ -171,6 +183,8 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 // CreateJob makes a new job
 func (jm *Jobmanager) CreateJob(name string, namespace string,
 	image string, command []string, args []string, notifier jobnotifier) (*batchv1.Job, error) {
+	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v, image:%v, command:%v, args:%v, notifier:%v",
+		name, namespace, image, command, args, notifier)
 	//TODO: if job exists, delete it
 	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true)
 	if err != nil {
@@ -184,20 +198,29 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 
 // DeleteJob deletes a job
 func (jm *Jobmanager) DeleteJob(name string) error {
+	clarkezoneLog.Debugf("DeleteJob() called with name:%v", name)
 	return kl.DeleteJob(jm.currentClientset, name)
 }
 
 // GetConfig returns a config based on incluster, out of cluster
 func GetConfig(incluster bool) (*rest.Config, error) {
+	clarkezoneLog.Debugf("GetConfig() called with incluster:%v", incluster)
 	var config *rest.Config
 	var err error
 	if incluster {
 		config, err = rest.InClusterConfig()
+		if err != nil {
+			clarkezoneLog.Errorf("InClusterConfig() returned error %v", err)
+		}
 	} else {
+		// TODO enable flexible configuration of non-incluster config
 		kubepath := "/users/jamesclarke/.kube/config"
 		var kubeconfig = &kubepath
 		// use the current context in kubeconfig
 		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+		if err != nil {
+			clarkezoneLog.Errorf("BuildConfigFromFlags() failed with %v", err)
+		}
 	}
 	return config, err
 }
