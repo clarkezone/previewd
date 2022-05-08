@@ -5,11 +5,22 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	hs "github.com/clarkezone/hookserve/hookserve"
+	"github.com/sirupsen/logrus"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
+
+// TestMain initizlie all tests
+func TestMain(m *testing.M) {
+	clarkezoneLog.Init(logrus.DebugLevel)
+	code := m.Run()
+	os.Exit(code)
+}
 
 func GetBody() *strings.Reader {
 	body := `{
