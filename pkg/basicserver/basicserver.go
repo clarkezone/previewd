@@ -98,3 +98,8 @@ func (bs *BasicServer) Shutdown() error {
 	<-bs.exitchan
 	return httpexit
 }
+
+// IsDone exposes a channel to use to determine if goroutines depending on listener running should exit
+func (bs *BasicServer) IsDone() <-chan struct{} {
+	return bs.ctx.Done()
+}

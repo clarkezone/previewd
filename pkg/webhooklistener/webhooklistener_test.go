@@ -23,6 +23,7 @@ func TestMain(m *testing.M) {
 }
 
 func GetBody() *strings.Reader {
+	//nolint
 	body := `{
 		"ref": "refs/heads/master",
 		"before": "cfbda0818c286970d373bab5e700599e572d3c40",
