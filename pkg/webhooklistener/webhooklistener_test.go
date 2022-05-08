@@ -2,7 +2,6 @@ package webhooklistener
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -22,6 +21,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+//nolint
 func GetBody() *strings.Reader {
 	//nolint
 	body := `{
@@ -157,23 +157,17 @@ func TestGiteaParse(t *testing.T) {
 	}
 }
 
-func Test_webhooklistening(t *testing.T) {
-	//wait := make(chan bool)
-	wh := WebhookListener{}
+func Test_hookprocessing(t *testing.T) {
+	wh := CreateWebhookListener(nil)
 	wh.StartListen("ss")
 	reader := GetBody()
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", "http://0.0.0.0:8090", reader)
-	if err != nil {
-		t.Errorf("bad request")
-	}
+
+	req := httptest.NewRequest(http.MethodPost, "/postreceive", reader)
 	req.Header.Set("X-GitHub-Event", "push")
-	_, err = client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//<-wait
-	err = wh.Shutdown()
+	w := httptest.NewRecorder()
+
+	wh.hookserver.ServeHTTP(w, req)
+	err := wh.Shutdown()
 	if err != nil {
 		t.Errorf("shutdown failed")
 	}
