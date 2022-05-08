@@ -19,7 +19,7 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] Kubelayer
   - [x] local resource manager
   - [x] port lrm to new logging
-  - [ ] port kubelayer to new logging
+  - [x] port kubelayer to new logging
   - [ ] port webhook listener
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
 - [ ] update integration test to work in okteto with auto-detect
