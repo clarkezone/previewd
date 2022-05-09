@@ -7,7 +7,9 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bmatsuo/go-jsontree v0.0.0-20140312042150-8a1cc1e88d44 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/clarkezone/hookserve v0.0.0-20220417134751-215c16c62bd4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect

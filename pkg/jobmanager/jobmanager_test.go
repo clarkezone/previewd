@@ -9,12 +9,22 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
+
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/sirupsen/logrus"
 )
 
 func SkipCI(t *testing.T) {
 	if os.Getenv("TEST_JEKPREV_TESTLOCALK8S") == "" {
 		t.Skip("Skipping K8slocaltest")
 	}
+}
+
+// TestMain initizlie all tests
+func TestMain(m *testing.M) {
+	clarkezoneLog.Init(logrus.DebugLevel)
+	code := m.Run()
+	os.Exit(code)
 }
 
 func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
