@@ -55,6 +55,7 @@ func (wl *WebhookListener) getHandler() func(w http.ResponseWriter, r *http.Requ
 
 func (wl *WebhookListener) getHookProcessor() func() {
 	return func() {
+		clarkezoneLog.Debugf("processing loop started")
 		defer func() {
 			clarkezoneLog.Debugf("processing loop exited")
 		}()
@@ -79,8 +80,10 @@ func (wl *WebhookListener) getHookProcessor() func() {
 
 // Shutdown closes underlying basicServer
 func (wl *WebhookListener) Shutdown() error {
-	clarkezoneLog.Debugf("Shutdown goroute")
+	clarkezoneLog.Debugf("Shutdown goroutine")
 	wl.exitchan <- true
+	clarkezoneLog.Debugf("executed send to exitchan; call shutdown on web")
 	err := wl.basicServer.Shutdown()
+	clarkezoneLog.Debugf("shutdown on web returned")
 	return err
 }

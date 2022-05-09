@@ -77,8 +77,9 @@ func handleSig(cleanupwork cleanupfunc) chan struct{} {
 		<-signalChan
 		clarkezoneLog.Debugf("\nhandleSig Received an interrupt, stopping services...\n")
 		if cleanupwork != nil {
-			clarkezoneLog.Debugf("")
+			clarkezoneLog.Debugf("cleanup work found")
 			cleanupwork()
+			clarkezoneLog.Debugf("cleanup work completed")
 		}
 
 		close(cleanupDone)
@@ -94,7 +95,10 @@ func (bs *BasicServer) Shutdown() error {
 	}
 	defer bs.ctx.Done()
 	defer bs.cancel()
+	clarkezoneLog.Debugf("request httpserver shutdown")
 	httpexit := bs.httpserver.Shutdown(bs.ctx)
+	clarkezoneLog.Debugf("shutdwon completed, wait for exitchan")
 	<-bs.exitchan
+	clarkezoneLog.Debugf("exit completed function return")
 	return httpexit
 }
