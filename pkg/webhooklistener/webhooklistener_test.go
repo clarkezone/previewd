@@ -165,8 +165,11 @@ func Test_hookprocessing(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/postreceive", reader)
 	req.Header.Set("X-GitHub-Event", "push")
 	w := httptest.NewRecorder()
-
-	wh.hookserver.ServeHTTP(w, req)
+	handle := wh.getHandler()
+	handle(w, req)
+	if w.Code != 200 {
+		t.Fatalf("Request failed due to bad payload")
+	}
 	err := wh.Shutdown()
 	if err != nil {
 		t.Errorf("shutdown failed")
