@@ -17,7 +17,7 @@ type WebhookListener struct {
 	initialBuild bool
 	hookserver   *hookserve.Server
 	basicServer  *basicserver.BasicServer
-	// cleanup      chan bool
+	exitchan     chan bool
 }
 
 // CreateWebhookListener creates a new instance of WebhookListener
@@ -25,7 +25,7 @@ func CreateWebhookListener(lrm *lrm.LocalRepoManager) *WebhookListener {
 	wl := WebhookListener{}
 	wl.lrm = lrm
 	wl.basicServer = basicserver.CreateBasicServer()
-	// wl.cleanup = make(chan bool)
+	wl.exitchan = make(chan bool)
 	return &wl
 }
 
@@ -57,11 +57,10 @@ func (wl *WebhookListener) getHookProcessor() func() {
 	return func() {
 		defer func() {
 			clarkezoneLog.Debugf("processing loop exited")
-			// wl.cleanup <- true
 		}()
 		for {
 			select {
-			case <-wl.basicServer.IsDone():
+			case <-wl.exitchan:
 				return
 			case event := <-wl.hookserver.Events:
 				clarkezoneLog.Debugf(event.Owner + " " + event.Repo + " " + event.Branch + " " + event.Commit)
@@ -80,7 +79,8 @@ func (wl *WebhookListener) getHookProcessor() func() {
 
 // Shutdown closes underlying basicServer
 func (wl *WebhookListener) Shutdown() error {
+	clarkezoneLog.Debugf("Shutdown goroute")
+	wl.exitchan <- true
 	err := wl.basicServer.Shutdown()
-	// <-wl.cleanup
 	return err
 }
