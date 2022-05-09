@@ -80,10 +80,10 @@ func (wl *WebhookListener) getHookProcessor() func() {
 
 // Shutdown closes underlying basicServer
 func (wl *WebhookListener) Shutdown() error {
-	clarkezoneLog.Debugf("Shutdown goroutine")
-	wl.exitchan <- true
-	clarkezoneLog.Debugf("executed send to exitchan; call shutdown on web")
+	clarkezoneLog.Debugf("WebHookListener:Shutdown() Shutdown goroutine")
+	close(wl.exitchan)
+	clarkezoneLog.Debugf("WebHookListener:Shutdown() executed send to exitchan; call shutdown on basicServer")
 	err := wl.basicServer.Shutdown()
-	clarkezoneLog.Debugf("shutdown on web returned")
+	clarkezoneLog.Debugf("WebHookListener:Shutdown() shutdown on web returned")
 	return err
 }
