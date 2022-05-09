@@ -90,15 +90,15 @@ func handleSig(cleanupwork cleanupfunc) chan struct{} {
 // Shutdown terminates the listening thread
 func (bs *BasicServer) Shutdown() error {
 	if bs.exitchan == nil {
-		clarkezoneLog.Debugf("\nno exit channel detected on shutdown\n")
-		return fmt.Errorf("no exit channel detected on shutdown")
+		clarkezoneLog.Debugf("BasicServer: no exit channel detected on shutdown\n")
+		return fmt.Errorf("BasicServer: no exit channel detected on shutdown")
 	}
 	defer bs.ctx.Done()
 	defer bs.cancel()
-	clarkezoneLog.Debugf("request httpserver shutdown")
+	clarkezoneLog.Debugf("BasicServer: request httpserver shutdown")
 	httpexit := bs.httpserver.Shutdown(bs.ctx)
-	clarkezoneLog.Debugf("shutdwon completed, wait for exitchan")
+	clarkezoneLog.Debugf("BasicServer: shutdwon completed, wait for exitchan")
 	<-bs.exitchan
-	clarkezoneLog.Debugf("exit completed function return")
+	clarkezoneLog.Debugf("BasicServer: exit completed function returqn")
 	return httpexit
 }

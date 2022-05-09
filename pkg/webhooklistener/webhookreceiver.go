@@ -55,9 +55,9 @@ func (wl *WebhookListener) getHandler() func(w http.ResponseWriter, r *http.Requ
 
 func (wl *WebhookListener) getHookProcessor() func() {
 	return func() {
-		clarkezoneLog.Debugf("processing loop started")
+		clarkezoneLog.Debugf("WebhookListener: processing loop started")
 		defer func() {
-			clarkezoneLog.Debugf("processing loop exited")
+			clarkezoneLog.Debugf("WebhookListener: processing loop exited")
 		}()
 		for {
 			select {
@@ -66,12 +66,12 @@ func (wl *WebhookListener) getHookProcessor() func() {
 			case event := <-wl.hookserver.Events:
 				clarkezoneLog.Debugf(event.Owner + " " + event.Repo + " " + event.Branch + " " + event.Commit)
 				if wl.lrm == nil {
-					clarkezoneLog.Debugf("Webhook event ignored as lrm is not initialized")
-					return
+					clarkezoneLog.Debugf("WebhookListener: Webhook event ignored as lrm is not initialized")
+					break
 				}
 				err := wl.lrm.HandleWebhook(event.Branch, wl.initialBuild, wl.initialBuild)
 				if err != nil {
-					clarkezoneLog.Errorf("HandleWebhook failed:%v", err)
+					clarkezoneLog.Errorf("WebhookListener:HandleWebhook failed:%v", err)
 				}
 			}
 		}
