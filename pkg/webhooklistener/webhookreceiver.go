@@ -46,30 +46,11 @@ func (wl *WebhookListener) StartListen(secret string) {
 
 func (wl *WebhookListener) getHandler() func(w http.ResponseWriter, r *http.Request) {
 	responsewriter := func(w http.ResponseWriter, r *http.Request) {
-		// leh := NewLoggingResponseWriter(w)
 		clarkezoneLog.Debugf("Begin")
 		wl.hookserver.ServeHTTP(w, r)
 		clarkezoneLog.Debugf("end")
 	}
 	return responsewriter
-}
-
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	statusCode int
-}
-
-func NewLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
-	return &loggingResponseWriter{w, http.StatusOK}
-}
-
-func (lrw *loggingResponseWriter) WriteHeader(code int) {
-	clarkezoneLog.Debugf("writehader %v", code)
-	if code != 200 {
-		clarkezoneLog.Errorf("Error writing %v", code)
-	}
-	lrw.statusCode = code
-	lrw.ResponseWriter.WriteHeader(code)
 }
 
 func (wl *WebhookListener) getHookProcessor() func() {
