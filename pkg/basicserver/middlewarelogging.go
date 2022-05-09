@@ -15,7 +15,7 @@ type LoggingMiddleware struct {
 func (l *LoggingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	l.handler.ServeHTTP(w, r)
-	clarkezoneLog.Debugf("%s %s %v", r.Method, r.URL, time.Since(start))
+	clarkezoneLog.Debugf("LogMW: %s %s %v", r.Method, r.URL, time.Since(start))
 }
 
 // NewLoggingMiddleware constructs a new Logger middleware handler
