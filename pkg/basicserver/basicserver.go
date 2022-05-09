@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/clarkezone/previewd/internal"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	//	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -32,16 +32,17 @@ func CreateBasicServer() *BasicServer {
 }
 
 // StartListen Start listening for a connection
-func (bs *BasicServer) StartListen(secret string) {
+func (bs *BasicServer) StartListen(secret string, mux http.Handler) {
 	clarkezoneLog.Successf("starting... basic server on :%v", fmt.Sprint(internal.Port))
 
 	bs.exitchan = make(chan bool)
 	bs.ctx, bs.cancel = context.WithCancel(context.Background())
 
 	bs.httpserver = &http.Server{Addr: ":" + fmt.Sprint(internal.Port)}
+	bs.httpserver.Handler = mux
 
 	// expose metrics endpoint
-	http.Handle("/metrics", promhttp.Handler())
+	// mux.HandleFunc("/metrics", promhttp.Handler())
 
 	go func() {
 		err := bs.httpserver.ListenAndServe()

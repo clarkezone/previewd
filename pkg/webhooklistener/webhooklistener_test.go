@@ -11,6 +11,7 @@ import (
 	hs "github.com/clarkezone/hookserve/hookserve"
 	"github.com/sirupsen/logrus"
 
+	"github.com/clarkezone/previewd/pkg/basicserver"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
@@ -165,8 +166,12 @@ func Test_hookprocessing(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/postreceive", reader)
 	req.Header.Set("X-GitHub-Event", "push")
 	w := httptest.NewRecorder()
-	handle := wh.getHandler()
-	handle(w, req)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", wh.getHandler())
+	wrappedMux := basicserver.NewLoggingMiddleware(mux)
+	// handle := wh.getHandler()
+	// handle = basicserver.NewLoggingMiddleware(handle)
+	wrappedMux.ServeHTTP(w, req)
 	if w.Code != 200 {
 		t.Fatalf("Request failed due to bad payload")
 	}
