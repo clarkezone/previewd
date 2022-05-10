@@ -31,7 +31,8 @@ endif
 
 BINDIR    := $(CURDIR)/bin
 PLATFORMS := linux/amd64/rk-Linux-x86_64 darwin/amd64/rk-Darwin-x86_64 windows/amd64/rk.exe linux/arm64/rk-Linux-arm64 darwin/arm64/rk-Darwin-arm64
-BUILDCOMMAND := go build
+# dlv exec ./bin/previewd --headless --listen=:2345 --log --api-version=2 -- testserver --loglevel=debug
+BUILDCOMMANDDEBUG := go build -gcflags "all=-N -l" -tags "osusergo netgo static_build"
 BUILDCOMMAND := go build -trimpath -ldflags "-s -w -X github.com/clarkezone/previewd/pkg/config.VersionHash=${VERSION_HASH} -X github.com/clarkezone/previewd/pkg/config.VersionString=${VERSION_STRING}" -tags "osusergo netgo static_build"
 temp = $(subst /, ,$@)
 os = $(word 1, $(temp))
@@ -51,9 +52,9 @@ install-tools:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && \
 	go install github.com/uw-labs/strongbox@latest
 
+# export $(cat ~/.previewd_test.env | xargs)
 .PHONY: test
 test:
-	./scripts/setenv.sh
 	go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration-actions
@@ -81,6 +82,10 @@ precommit:
 .PHONY: build
 build:
 	$(BUILDCOMMAND) -o ${BINDIR}/previewd
+
+.PHONY: builddlv
+builddlv:
+	$(BUILDCOMMANDDEBUG) -o ${BINDIR}/previewd
 
 .PHONY: release
 build-all: $(PLATFORMS)

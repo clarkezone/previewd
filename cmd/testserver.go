@@ -12,8 +12,6 @@ import (
 
 	"github.com/clarkezone/previewd/pkg/basicserver"
 	"github.com/clarkezone/previewd/pkg/config"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/spf13/cobra"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
@@ -35,22 +33,22 @@ to quickly create a Cobra application.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clarkezoneLog.Successf("previewd version %v,%v started in testserver mode\n",
 				config.VersionString, config.VersionHash)
-			http.HandleFunc("/", getHelloHandler())
+			mux := basicserver.DefaultMux()
+			mux.HandleFunc("/", getHelloHandler())
+			// mux.Handle("/metrics", promhttp.Handler())
 
-			bs.StartListen("")
+			var wrappedmux http.Handler
+			wrappedmux = basicserver.NewLoggingMiddleware(mux)
+			wrappedmux = basicserver.NewPromMetricsMiddleware("previewd_testserver_", wrappedmux)
+
+			bs.StartListen("", wrappedmux)
 			return bs.WaitforInterupt()
 		},
 	}
-
-	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "previewd_testserver_totalops",
-		Help: "The total number of processed http requests for testserver",
-	})
 )
 
 func getHelloHandler() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		opsProcessed.Inc()
 		message := fmt.Sprintln("Hello World<BR>")
 		_, err := w.Write([]byte(message))
 		if err != nil {

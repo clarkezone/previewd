@@ -34,21 +34,19 @@ func (wl *WebhookListener) StartListen(secret string) {
 	clarkezoneLog.Infof("Started webhook")
 
 	wl.hookserver = hookserve.NewServer()
-	http.HandleFunc("/", wl.getHandler())
-	//	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-	// TODO: add instrumentation
-	//		wl.hookserver.ServeHTTP(w, r)
-	//
-	//	})
+	mux := basicserver.DefaultMux()
+	mux.HandleFunc("/", wl.getHandler())
+	var wrappedMux http.Handler
+	wrappedMux = basicserver.NewLoggingMiddleware(mux)
+	wrappedMux = basicserver.NewPromMetricsMiddleware("previewd_webhook", wrappedMux)
+
 	go wl.getHookProcessor()()
-	wl.basicServer.StartListen(secret)
+	wl.basicServer.StartListen(secret, wrappedMux)
 }
 
 func (wl *WebhookListener) getHandler() func(w http.ResponseWriter, r *http.Request) {
 	responsewriter := func(w http.ResponseWriter, r *http.Request) {
-		clarkezoneLog.Debugf("Begin")
 		wl.hookserver.ServeHTTP(w, r)
-		clarkezoneLog.Debugf("end")
 	}
 	return responsewriter
 }

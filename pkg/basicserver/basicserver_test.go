@@ -1,6 +1,7 @@
 package basicserver
 
 import (
+	"net/http"
 	"os"
 	"testing"
 
@@ -18,7 +19,8 @@ func TestMain(m *testing.M) {
 func Test_webhooklistening(t *testing.T) {
 	// wait := make(chan bool)
 	wh := BasicServer{}
-	wh.StartListen("ss")
+	mux := http.NewServeMux()
+	wh.StartListen("ss", mux)
 	// TODO: how to wait for server async start
 	// client := &http.Client{}
 	// req, err := http.NewRequestWithContext(context.Background(), "POST", "http://0.0.0.0:8090", nil)

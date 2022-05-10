@@ -31,17 +31,26 @@ func CreateBasicServer() *BasicServer {
 	return &bs
 }
 
+// DefaultMux returns a mux preconfigured with defaults
+func DefaultMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	return mux
+}
+
 // StartListen Start listening for a connection
-func (bs *BasicServer) StartListen(secret string) {
+func (bs *BasicServer) StartListen(secret string, mux http.Handler) {
 	clarkezoneLog.Successf("starting... basic server on :%v", fmt.Sprint(internal.Port))
 
 	bs.exitchan = make(chan bool)
 	bs.ctx, bs.cancel = context.WithCancel(context.Background())
 
 	bs.httpserver = &http.Server{Addr: ":" + fmt.Sprint(internal.Port)}
+	bs.httpserver.Handler = mux
 
 	// expose metrics endpoint
-	http.Handle("/metrics", promhttp.Handler())
+	// m := mux.(*http.ServeMux)
+	// m.Handle("/metrics", promhttp.Handler())
 
 	go func() {
 		err := bs.httpserver.ListenAndServe()
