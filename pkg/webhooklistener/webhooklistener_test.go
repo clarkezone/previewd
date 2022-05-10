@@ -168,7 +168,9 @@ func Test_hookprocessing(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", wh.getHandler())
-	wrappedMux := basicserver.NewLoggingMiddleware(mux)
+	var wrappedMux http.Handler
+	wrappedMux = basicserver.NewLoggingMiddleware(mux)
+	wrappedMux = basicserver.NewPromMetricsMiddleware("test_prefix", wrappedMux)
 	// handle := wh.getHandler()
 	// handle = basicserver.NewLoggingMiddleware(handle)
 	wrappedMux.ServeHTTP(w, req)

@@ -36,7 +36,10 @@ func (wl *WebhookListener) StartListen(secret string) {
 	wl.hookserver = hookserve.NewServer()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", wl.getHandler())
-	wrappedMux := basicserver.NewLoggingMiddleware(mux)
+	var wrappedMux http.Handler
+	wrappedMux = basicserver.NewLoggingMiddleware(mux)
+	wrappedMux = basicserver.NewPromMetricsMiddleware("previewd_webhook", wrappedMux)
+
 	go wl.getHookProcessor()()
 	wl.basicServer.StartListen(secret, wrappedMux)
 }
