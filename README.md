@@ -15,19 +15,17 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 # Port webhook and dependencies
 
 - [ ] port all packages
+
   - [x] JobManager
   - [x] Kubelayer
   - [x] local resource manager
   - [x] port lrm to new logging
   - [x] port kubelayer to new logging
   - [x] port webhook listener
-  - [x] add logging and metrics to listener using middleware
-    - [x] workout how to bucket counters by successtype
-    - [x] Fix endpoint in duration
-    - [x] parameterize metrics names in middleware
-    - [x] Fix /metrics in testserver to hook in basicserver
-    - [x] Add logging and metrics to webhook
-    - [x] ensure test coverage for middleware
+  - [x] add logging and metrics to listener using middleware - [x] workout how to bucket counters by successtype - [x] Fix endpoint in duration - [x] parameterize metrics names in middleware - [x] Fix /metrics in testserver to hook in basicserver - [x] Add logging and metrics to webhook - [x] ensure test coverage for middleware
+        Makefile command to trigger k8s integration test working against dev cluster
+        Integration test to test job in okteto default namespace
+
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
 - [ ] update integration test to work in okteto with auto-detect
 - [ ] make command to call integration test
