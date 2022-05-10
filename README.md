@@ -21,11 +21,11 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] port lrm to new logging
   - [x] port kubelayer to new logging
   - [x] port webhook listener
-  - [ ] add logging and metrics to listener using middleware
+  - [x] add logging and metrics to listener using middleware
     - [x] workout how to bucket counters by successtype
     - [x] Fix endpoint in duration
     - [x] parameterize metrics names in middleware
-    - [ ] Fix /metrics in testserver to hook in basicserver
+    - [x] Fix /metrics in testserver to hook in basicserver
     - [x] Add logging and metrics to webhook
     - [x] ensure test coverage for middleware
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function

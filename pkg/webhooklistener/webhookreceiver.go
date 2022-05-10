@@ -34,7 +34,7 @@ func (wl *WebhookListener) StartListen(secret string) {
 	clarkezoneLog.Infof("Started webhook")
 
 	wl.hookserver = hookserve.NewServer()
-	mux := http.NewServeMux()
+	mux := basicserver.DefaultMux()
 	mux.HandleFunc("/", wl.getHandler())
 	var wrappedMux http.Handler
 	wrappedMux = basicserver.NewLoggingMiddleware(mux)

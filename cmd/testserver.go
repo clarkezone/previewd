@@ -12,7 +12,6 @@ import (
 
 	"github.com/clarkezone/previewd/pkg/basicserver"
 	"github.com/clarkezone/previewd/pkg/config"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
@@ -34,9 +33,9 @@ to quickly create a Cobra application.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clarkezoneLog.Successf("previewd version %v,%v started in testserver mode\n",
 				config.VersionString, config.VersionHash)
-			mux := http.NewServeMux()
+			mux := basicserver.DefaultMux()
 			mux.HandleFunc("/", getHelloHandler())
-			mux.Handle("/metrics", promhttp.Handler())
+			// mux.Handle("/metrics", promhttp.Handler())
 
 			var wrappedmux http.Handler
 			wrappedmux = basicserver.NewLoggingMiddleware(mux)
