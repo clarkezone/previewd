@@ -33,7 +33,7 @@ func (l *PromMetricsMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 	l.handler.ServeHTTP(w, r)
 	httpDuration := time.Since(start)
 	l.opsProcessed.WithLabelValues(fmt.Sprint(rec.code), r.Method).Inc()
-	l.requestDuration.WithLabelValues(r.URL.RawPath).Observe(httpDuration.Seconds())
+	l.requestDuration.WithLabelValues(r.RequestURI).Observe(httpDuration.Seconds())
 }
 
 func newMiddleware(handlerToWrap http.Handler) *PromMetricsMiddleware {

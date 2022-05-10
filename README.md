@@ -22,8 +22,8 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] port kubelayer to new logging
   - [x] port webhook listener
   - [ ] add logging and metrics to listener using middleware
-    - [ ] workout how to bucket counters by successtype
-    - [ ] Fix endpoint in duration
+    - [x] workout how to bucket counters by successtype
+    - [x] Fix endpoint in duration
     - [ ] parameterize metrics names in middleware
     - [ ] Fix /metrics in testserver to hook in basicserver
     - [ ] Add logging and metrics to webhook
