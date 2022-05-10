@@ -52,9 +52,9 @@ install-tools:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && \
 	go install github.com/uw-labs/strongbox@latest
 
+# export $(cat ~/.previewd_test.env | xargs)
 .PHONY: test
 test:
-	./scripts/setenv.sh
 	go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration-actions
