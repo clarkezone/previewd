@@ -29,8 +29,12 @@ func TestMain(m *testing.M) {
 
 func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
 	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) {
-	SkipCI(t)
-	jm, err := Newjobmanager(false, "testns")
+	// SkipCI(t)
+	c, err := GetConfigOutofCluster("")
+	if err != nil {
+		t.Fatalf("Couldn't get config %v", err)
+	}
+	jm, err := Newjobmanager(c, "testns")
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
@@ -55,7 +59,7 @@ func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
 
 func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
-	SkipCI(t)
+	// SkipCI(t)
 	completechannel := make(chan struct{})
 	deletechannel := make(chan struct{})
 	notifier := (func(job *batchv1.Job, typee ResourseStateType) {
@@ -78,7 +82,7 @@ func TestCreateAndSucceed(t *testing.T) {
 
 func TestCreateAndFail(t *testing.T) {
 	t.Logf("TestCreateAndFail")
-	SkipCI(t)
+	// SkipCI(t)
 	client := fake.NewSimpleClientset()
 	client.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
 		gvr := action.GetResource()
@@ -90,7 +94,7 @@ func TestCreateAndFail(t *testing.T) {
 		return false, watch, nil
 	})
 
-	jm, err := newjobmanagerwithclient(false, client, "testns")
+	jm, err := newjobmanagerwithclient(client, "testns")
 	if err != nil {
 		t.Errorf("error")
 	}
@@ -140,9 +144,9 @@ func TestCreateAndFail(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {
-	SkipCI(t)
+	// SkipCI(t)
 	t.Logf("TestGetConfig")
-	var _, err = GetConfig(false)
+	var _, err = GetConfigOutofCluster("")
 	if err != nil {
 		t.Errorf("unable to create config")
 	}
