@@ -12,11 +12,11 @@ import (
 	"path"
 	"runtime"
 
+	"github.com/clarkezone/previewd/pkg/jobmanager"
+	llrm "github.com/clarkezone/previewd/pkg/localrepomanager"
+	"github.com/clarkezone/previewd/pkg/webhooklistener"
 	"github.com/spf13/cobra"
 	batchv1 "k8s.io/api/batch/v1"
-	"temp.com/JekyllBlogPreview/jobmanager"
-	llrm "temp.com/JekyllBlogPreview/localrepomanager"
-	"temp.com/JekyllBlogPreview/webhooklistener"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -45,7 +45,8 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func PerformActions(repo string, localRootDir string, initialBranch string, preformInCluster bool, namespace string, webhooklisten bool) error {
+func PerformActions(repo string, localRootDir string, initialBranch string,
+	preformInCluster bool, namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
 	if serve || initialbuild || webhooklisten || initialclone {
 		result := verifyFlags(repo, localRootDir, initialbuild, initialclone)
 		if result != nil {
@@ -64,7 +65,6 @@ func PerformActions(repo string, localRootDir string, initialBranch string, pref
 		}
 	}
 
-	var jm *jobmanager.Jobmanager
 	var err error
 	if webhooklisten || initialbuild {
 		jm, err = jobmanager.Newjobmanager(preformInCluster, namespace)
@@ -72,7 +72,11 @@ func PerformActions(repo string, localRootDir string, initialBranch string, pref
 			return err
 		}
 	}
-	lrm = llrm.CreateLocalRepoManager(localRootDir, sharemgn, enableBranchMode, jm)
+	lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
+	if err != nil {
+		clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
+		return err
+	}
 	whl = webhooklistener.CreateWebhookListener(lrm)
 
 	if initialclone {
