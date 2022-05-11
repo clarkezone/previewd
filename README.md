@@ -4,6 +4,32 @@
 
 A daemon for managing rendering for static sites and blogs in kubernetes using jobs.
 
+```mermaid
+graph  LR
+  client([client])-..->ingress[Ingress];
+  webhook([git webhook])-..->hookingress[webhook receiver<BR>ingress];
+  ingress-->service[Service];
+  hookingress-->previewdservice
+  repo-->webhook
+  subgraph git
+  repo
+  end
+  subgraph cluster
+  hookingress;
+  ingress;
+  previewdservice-->pod3[previewd Pod]
+  repo-..pull content..->pod3
+  service-->pod1[Pod];
+  service-->pod2[Pod];
+  end
+  classDef plain fill:#ddd,stroke:#fff,stroke-width:4px,color:#000;
+  classDef k8s fill:#326ce5,stroke:#fff,stroke-width:4px,color:#fff;
+  classDef cluster fill:#fff,stroke:#bbb,stroke-width:2px,color:#326ce5;
+  class ingress,hookingress,service,pod1,pod2,pod3,previewdservice, k8s;
+  class client plain;
+  class cluster cluster;
+```
+
 # ~~Get basic skeleton app going~~
 
 - [x] Badges, CI/CD, Test infra, Code Coverage, license, Linting, precommit, Dockfile, basic cli app with test server with basic logging and metrics
