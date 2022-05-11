@@ -28,10 +28,19 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
     - [x] Fix /metrics in testserver to hook in basicserver
     - [x] Add logging and metrics to webhook
     - [x] ensure test coverage for middleware
+- [ ] Support out of cluster kubeconfig from file in tests
+  - [x] makefile integration tests using tags
+  - [x] k3s config checked in
+  - [x] NewJobManager works with file based config in tests
+  - [ ] how to debug tests with tags
+  - [ ] use strongbox to encrypt config
+  - [ ] fix UT's in k3s
+    - [ ] Run tests in default namespace for okteto compatibility
+    - [ ] Pass in volumes, not hard coded
+- [ ] update integration test to work in okteto, using default namespace
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
-- [ ] update integration test to work in okteto with auto-detect
-- [ ] make command to call integration test
-- [ ] github action to configure okteto connection and call integration test
+- [ ] cobra command hooked up for e2e flow
+- [ ] github action to configure okteto connection and call integration test using strongbox
 - [ ] can code coverage reflect integration test
 - [ ] verify metrics and logging in prom on k8s in okteto
 

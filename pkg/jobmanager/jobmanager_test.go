@@ -1,18 +1,38 @@
+//go:build integration
+// +build integration
+
 package jobmanager
 
 import (
 	"log"
 	"os"
+	"os/exec"
+	"path"
+	"strings"
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 	clienttesting "k8s.io/client-go/testing"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
 )
+
+var gitRoot string
+
+func setup() {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		panic("couldn't read output from git command get gitroot")
+	}
+	gitRoot = string(output)
+	gitRoot = strings.TrimSuffix(gitRoot, "\n")
+}
 
 func SkipCI(t *testing.T) {
 	if os.Getenv("TEST_JEKPREV_TESTLOCALK8S") == "" {
@@ -23,6 +43,7 @@ func SkipCI(t *testing.T) {
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
 	clarkezoneLog.Init(logrus.DebugLevel)
+	setup()
 	code := m.Run()
 	os.Exit(code)
 }
@@ -30,10 +51,7 @@ func TestMain(m *testing.M) {
 func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
 	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) {
 	// SkipCI(t)
-	c, err := GetConfigOutofCluster("")
-	if err != nil {
-		t.Fatalf("Couldn't get config %v", err)
-	}
+	c := getTestConfig(t)
 	jm, err := Newjobmanager(c, "testns")
 	if err != nil {
 		t.Errorf("job manager create failed")
@@ -55,6 +73,15 @@ func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
 	}
 	log.Println(("Deleted."))
 	<-deletechannel
+}
+
+func getTestConfig(t *testing.T) *rest.Config {
+	configpath := path.Join(gitRoot, "integration/k3s-c2.yaml")
+	c, err := GetConfigOutofCluster(configpath)
+	if err != nil {
+		t.Fatalf("Couldn't get config %v", err)
+	}
+	return c
 }
 
 func TestCreateAndSucceed(t *testing.T) {
@@ -146,9 +173,11 @@ func TestCreateAndFail(t *testing.T) {
 func TestGetConfig(t *testing.T) {
 	// SkipCI(t)
 	t.Logf("TestGetConfig")
-	var _, err = GetConfigOutofCluster("")
-	if err != nil {
-		t.Errorf("unable to create config")
+
+	c := getTestConfig(t)
+
+	if c == nil {
+		t.Fatalf("Unable to get config")
 	}
 	// TODO flag for job to autodelete
 	// TODO wait for error exit

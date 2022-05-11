@@ -64,7 +64,7 @@ func CreateJob(clientset kubernetes.Interface,
 				ObjectMeta: metav1.ObjectMeta{},
 
 				Spec: apiv1.PodSpec{
-					Volumes:       getVolumes(sourcename, rendername),
+					//Volumes:       getVolumes(sourcename, rendername),
 					Containers:    getContainers(name, image),
 					RestartPolicy: apiv1.RestartPolicyNever,
 				},
@@ -117,18 +117,18 @@ func getContainers(name string, image string) []apiv1.Container {
 			//TODO: command and args optional
 			//Command:         command,
 			//Args:            args,
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      "blogsource",
-					ReadOnly:  true,
-					MountPath: "/src",
-				},
-				{
-					Name:      "blogrender",
-					ReadOnly:  false,
-					MountPath: "/site",
-				},
-			},
+			//			VolumeMounts: []apiv1.VolumeMount{
+			//				{
+			//					Name:      "blogsource",
+			//					ReadOnly:  true,
+			//					MountPath: "/src",
+			//				},
+			//				{
+			//					Name:      "blogrender",
+			//					ReadOnly:  false,
+			//					MountPath: "/site",
+			//				},
+			//			},
 		},
 	}
 }
