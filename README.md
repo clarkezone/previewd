@@ -32,7 +32,7 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] makefile integration tests using tags
   - [x] k3s config checked in
   - [x] NewJobManager works with file based config in tests
-  - [ ] how to debug tests with tags
+  - [x] how to debug tests with tags
   - [ ] use strongbox to encrypt config
   - [ ] fix UT's in k3s
     - [ ] Run tests in default namespace for okteto compatibility

@@ -67,6 +67,7 @@ func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
 	return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
 }
 
+// nolint
 func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (*Jobmanager, error) {
 	clarkezoneLog.Debugf("newjobmanagerwithclient called with clientset:%v, namespace:%v",
 		clientset, namespace)

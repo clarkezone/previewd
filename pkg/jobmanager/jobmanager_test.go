@@ -1,6 +1,9 @@
 //go:build integration
 // +build integration
 
+// to setup vscode for debugging integration tests see:
+// https://www.ryanchapin.com/configuring-vscode-to-use-build-tags-in-golang-to-separate-integration-and-unit-test-code/
+
 package jobmanager
 
 import (
