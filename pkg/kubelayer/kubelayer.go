@@ -86,6 +86,7 @@ func CreateJob(clientset kubernetes.Interface,
 	return job, nil
 }
 
+//nolint
 func getVolumes(sourcename string, rendername string) []apiv1.Volume {
 	return []apiv1.Volume{
 		{
