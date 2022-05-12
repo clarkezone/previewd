@@ -176,11 +176,11 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 
 // CreateJob makes a new job
 func (jm *Jobmanager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier) (*batchv1.Job, error) {
+	image string, command []string, args []string, notifier jobnotifier, autoDelete bool) (*batchv1.Job, error) {
 	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v, image:%v, command:%v, args:%v, notifier:%v",
 		name, namespace, image, command, args, notifier)
 	//TODO: if job exists, delete it
-	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true)
+	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true, autoDelete)
 	if err != nil {
 		return nil, err
 	}

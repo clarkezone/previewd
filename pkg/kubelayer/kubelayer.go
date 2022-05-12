@@ -32,7 +32,7 @@ func PingAPI(clientset kubernetes.Interface) {
 func CreateJob(clientset kubernetes.Interface,
 	name string,
 	namespace string, image string, command []string,
-	args []string, always bool) (*batchv1.Job, error) {
+	args []string, always bool, autoDelete bool) (*batchv1.Job, error) {
 	// TODO use default namespace if empty
 	// TODO switch tests to call with empty
 	// FIX
@@ -42,13 +42,13 @@ func CreateJob(clientset kubernetes.Interface,
 
 	jobsClient := clientset.BatchV1().Jobs(namespace)
 
-	sourcename, rendername, err := findpvnames(clientset, namespace)
-	clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
+	// sourcename, rendername, err := findpvnames(clientset, namespace)
+	//clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
 
-	if err != nil {
-		clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
-		return nil, err
-	}
+	// if err != nil {
+	//	clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
+	//	return nil, err
+	// }
 
 	// TODO hook up pull policy
 	job := &batchv1.Job{
@@ -59,7 +59,7 @@ func CreateJob(clientset kubernetes.Interface,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit:            int32Ptr(1),
-			TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
+			//TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{},
 
@@ -134,7 +134,7 @@ func getContainers(name string, image string) []apiv1.Container {
 	}
 }
 
-func findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
+func Findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
 	var sourcename string
 	var rendername string
 

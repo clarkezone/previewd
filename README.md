@@ -33,11 +33,15 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] k3s config checked in
   - [x] NewJobManager works with file based config in tests
   - [x] how to debug tests with tags
-  - [ ] use strongbox to encrypt config
+  - [x] use strongbox to encrypt config
   - [ ] fix UT's in k3s
-    - [ ] Run tests in default namespace for okteto compatibility
-    - [ ] Pass in volumes, not hard coded
-- [ ] update integration test to work in okteto, using default namespace
+    - [ ] Get tests running
+- [ ] Flesh out tests to cover previewd scenario
+  - [ ] Add tests for autodelete
+  - [ ] Add tests for volume mounting
+  - [ ] Create namespace if needed for tests
+  - [ ] Run tests in default namespace for okteto compatibility
+  - [ ] Pass in volumes, not hard coded
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
 - [ ] cobra command hooked up for e2e flow
 - [ ] github action to configure okteto connection and call integration test using strongbox
