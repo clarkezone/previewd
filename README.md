@@ -14,7 +14,7 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 
 # Port webhook and dependencies
 
-- [ ] port all packages
+- [x] port all packages
   - [x] JobManager
   - [x] Kubelayer
   - [x] local resource manager
@@ -28,20 +28,20 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
     - [x] Fix /metrics in testserver to hook in basicserver
     - [x] Add logging and metrics to webhook
     - [x] ensure test coverage for middleware
-- [ ] Support out of cluster kubeconfig from file in tests
+- [x] Support out of cluster kubeconfig from file in tests
   - [x] makefile integration tests using tags
   - [x] k3s config checked in
   - [x] NewJobManager works with file based config in tests
   - [x] how to debug tests with tags
   - [x] use strongbox to encrypt config
-  - [ ] fix UT's in k3s
-    - [ ] Get tests running
-- [ ] Flesh out tests to cover previewd scenario
-  - [ ] Add tests for autodelete
-  - [ ] Add tests for volume mounting
-  - [ ] Create namespace if needed for tests
-  - [ ] Run tests in default namespace for okteto compatibility
+  - [x] fix UT's in k3s
+- [ ] Create missing tests
   - [ ] Pass in volumes, not hard coded
+  - [ ] Rebuild find names functionality via a test
+  - [ ] test mount volumes
+  - [ ] Test for autodelete
+  - [ ] Run tests in default namespace for okteto compatibility
+- [ ] update integration test to work in okteto, using default namespace
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
 - [ ] cobra command hooked up for e2e flow
 - [ ] github action to configure okteto connection and call integration test using strongbox

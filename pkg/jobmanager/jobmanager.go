@@ -191,9 +191,9 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 }
 
 // DeleteJob deletes a job
-func (jm *Jobmanager) DeleteJob(name string) error {
-	clarkezoneLog.Debugf("DeleteJob() called with name:%v", name)
-	return kl.DeleteJob(jm.currentClientset, name)
+func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
+	clarkezoneLog.Debugf("DeleteJob() called with name:%v namespace:%v", name, namespace)
+	return kl.DeleteJob(jm.currentClientset, name, namespace)
 }
 
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster

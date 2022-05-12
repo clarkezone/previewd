@@ -15,10 +15,7 @@ import (
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
-	clienttesting "k8s.io/client-go/testing"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
@@ -51,11 +48,12 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
-	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) (int32,int32,int32){
+func RunTestJob(completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
+	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) batchv1.Job {
 	// SkipCI(t)
 	c := getTestConfig(t)
-	jm, err := Newjobmanager(c, "testns")
+	const ns = "testns"
+	jm, err := Newjobmanager(c, ns)
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
@@ -64,21 +62,21 @@ func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
 		t.Fatalf("Unable to create JobManager")
 	}
 
-	job, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false)
+	_, err = jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false)
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
-	<-completechannel
+	outputjob := <-completechannel
 
 	log.Println("Completed; attempting delete")
-	// err = jm.DeleteJob("alpinetest")
-	// if err != nil {
-	//	t.Fatalf("Unable to delete job %v", err)
-	// }
+	err = jm.DeleteJob("alpinetest", ns)
+	if err != nil {
+		t.Fatalf("Unable to delete job %v", err)
+	}
 	log.Println(("Deleted."))
 	<-deletechannel
 
-	return job.Status.Active, job.Status.Succeeded, job.Status.Failed
+	return outputjob
 }
 
 // TODO test autodelete
@@ -100,8 +98,8 @@ func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
-	_, succeeded, _ := RunTestJob(completechannel, deletechannel, t, nil, notifier)
-	if succeeded != 1 {
+	outputjob := RunTestJob(completechannel, deletechannel, t, nil, notifier)
+	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
 	}
 }
@@ -111,86 +109,36 @@ func TestCreateAndErrorWork(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	_, _, failed := RunTestJob(completechannel, deletechannel, t, command, notifier)
-	if failed != 1 {
+	outputjob := RunTestJob(completechannel, deletechannel, t, command, notifier)
+	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
 	}
 }
 
-func TestCreateAndFail(t *testing.T) {
-	t.Logf("TestCreateAndFail")
-	// SkipCI(t)
-	client := fake.NewSimpleClientset()
-	client.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-		gvr := action.GetResource()
-		ns := action.GetNamespace()
-		watch, err := client.Tracker().Watch(gvr, ns)
-		if err != nil {
-			return false, nil, err
-		}
-		return false, watch, nil
-	})
-
-	jm, err := newjobmanagerwithclient(client, "testns")
-	if err != nil {
-		t.Errorf("error")
-	}
-	defer jm.Close()
-	if err != nil {
-		t.Fatalf("Unable to create JobManager")
-	}
-	completechannel, deletechannel, notifier := getNotifier()
-	command := []string{"error"}
-	_, err = jm.CreateJob("alpinetest", "", "alpine", command, nil, notifier, false)
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
-	<-completechannel
-
-	// TODO: get pod exit status
-
-
-	log.Println("Completed; attempting delete")
-	err = jm.DeleteJob("alpinetest")
-	if err != nil {
-		t.Fatalf("Unable to delete job %v", err)
-	}
-	log.Println(("Deleted."))
-	<-deletechannel
-	//TODO: [x] add delete function
-	//TODO: Move logic into test for succeeded / failed job incl delete.. does it work with mock
-	//TODO: ability to inject volumes
-	//TODO: support for namespace
-	//TODO:         verbose logging
-	//TODO:             Conditional log statements
-	//TODO:             Environment variable
-	//TODO: flag for job to autodelete
-	// TODO: test that verifies auto delete
-	// TODO: Ensure error if job with same name already exists
-}
-
-func getNotifier() (chan struct{}, chan struct{}, func(job *batchv1.Job, typee ResourseStateType)) {
-	completechannel := make(chan struct{})
-	deletechannel := make(chan struct{})
+func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, typee ResourseStateType)) {
+	completechannel := make(chan batchv1.Job)
+	deletechannel := make(chan batchv1.Job)
 	notifier := (func(job *batchv1.Job, typee ResourseStateType) {
 		clarkezoneLog.Debugf("Got job in outside world %v", typee)
 
-		if job.Status.Failed > 0 {
+		if completechannel != nil && typee == Update && job.Status.Failed > 0 {
 			clarkezoneLog.Debugf("Job failed")
-			//close(completechannel)
-			//completechannel = nil // avoid double close
+			completechannel <- *job
+			close(completechannel)
+			completechannel = nil // avoid double close
 		}
 
-		if completechannel != nil && typee == Update && job.Status.Active == 0 {
+		if completechannel != nil && typee == Update && job.Status.Succeeded > 0 {
 			clarkezoneLog.Debugf("Job succeeded")
-			//close(completechannel)
-			//completechannel = nil // avoid double close
+			completechannel <- *job
+			close(completechannel)
+			completechannel = nil // avoid double close
 		}
 
 		if typee == Delete && deletechannel != nil {
 			log.Printf("Deleted")
-			//close(deletechannel)
-			//deletechannel = nil
+			close(deletechannel)
+			deletechannel = nil
 		}
 	})
 	return completechannel, deletechannel, notifier

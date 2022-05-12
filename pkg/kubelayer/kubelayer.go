@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -156,8 +157,13 @@ func Findpvnames(clientset kubernetes.Interface, namespace string) (string, stri
 }
 
 // DeleteJob deletes an existing job resource
-func DeleteJob(clientset kubernetes.Interface, name string) error {
-	jobsClient := clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
+func DeleteJob(clientset kubernetes.Interface, name string, namespace string) error {
+	var jobsClient v1.JobInterface
+	if namespace == "" {
+		jobsClient = clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
+	} else {
+		jobsClient = clientset.BatchV1().Jobs(namespace)
+	}
 	meta := metav1.DeleteOptions{
 		TypeMeta:           metav1.TypeMeta{},
 		GracePeriodSeconds: new(int64),
