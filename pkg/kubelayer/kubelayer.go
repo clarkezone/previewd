@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -14,9 +15,9 @@ import (
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
-const (
-	jobttlsecondsafterfinished int32 = 1
-)
+// const (
+//	jobttlsecondsafterfinished int32 = 1
+// )
 
 // PingAPI tests if server is working
 func PingAPI(clientset kubernetes.Interface) {
@@ -32,7 +33,7 @@ func PingAPI(clientset kubernetes.Interface) {
 func CreateJob(clientset kubernetes.Interface,
 	name string,
 	namespace string, image string, command []string,
-	args []string, always bool) (*batchv1.Job, error) {
+	args []string, always bool, autoDelete bool) (*batchv1.Job, error) {
 	// TODO use default namespace if empty
 	// TODO switch tests to call with empty
 	// FIX
@@ -42,13 +43,13 @@ func CreateJob(clientset kubernetes.Interface,
 
 	jobsClient := clientset.BatchV1().Jobs(namespace)
 
-	sourcename, rendername, err := findpvnames(clientset, namespace)
-	clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
+	// sourcename, rendername, err := findpvnames(clientset, namespace)
+	// clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
 
-	if err != nil {
-		clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
-		return nil, err
-	}
+	// if err != nil {
+	//	clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
+	//	return nil, err
+	// }
 
 	// TODO hook up pull policy
 	job := &batchv1.Job{
@@ -58,13 +59,13 @@ func CreateJob(clientset kubernetes.Interface,
 			Namespace: namespace,
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit:            int32Ptr(1),
-			TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
+			BackoffLimit: int32Ptr(1),
+			// TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{},
 
 				Spec: apiv1.PodSpec{
-					Volumes:       getVolumes(sourcename, rendername),
+					// Volumes:       getVolumes(sourcename, rendername),
 					Containers:    getContainers(name, image),
 					RestartPolicy: apiv1.RestartPolicyNever,
 				},
@@ -86,6 +87,7 @@ func CreateJob(clientset kubernetes.Interface,
 	return job, nil
 }
 
+//nolint
 func getVolumes(sourcename string, rendername string) []apiv1.Volume {
 	return []apiv1.Volume{
 		{
@@ -117,23 +119,24 @@ func getContainers(name string, image string) []apiv1.Container {
 			//TODO: command and args optional
 			//Command:         command,
 			//Args:            args,
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      "blogsource",
-					ReadOnly:  true,
-					MountPath: "/src",
-				},
-				{
-					Name:      "blogrender",
-					ReadOnly:  false,
-					MountPath: "/site",
-				},
-			},
+			//			VolumeMounts: []apiv1.VolumeMount{
+			//				{
+			//					Name:      "blogsource",
+			//					ReadOnly:  true,
+			//					MountPath: "/src",
+			//				},
+			//				{
+			//					Name:      "blogrender",
+			//					ReadOnly:  false,
+			//					MountPath: "/site",
+			//				},
+			//			},
 		},
 	}
 }
 
-func findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
+// Findpvnames fines persistent volumes by name
+func Findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
 	var sourcename string
 	var rendername string
 
@@ -154,8 +157,13 @@ func findpvnames(clientset kubernetes.Interface, namespace string) (string, stri
 }
 
 // DeleteJob deletes an existing job resource
-func DeleteJob(clientset kubernetes.Interface, name string) error {
-	jobsClient := clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
+func DeleteJob(clientset kubernetes.Interface, name string, namespace string) error {
+	var jobsClient v1.JobInterface
+	if namespace == "" {
+		jobsClient = clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
+	} else {
+		jobsClient = clientset.BatchV1().Jobs(namespace)
+	}
 	meta := metav1.DeleteOptions{
 		TypeMeta:           metav1.TypeMeta{},
 		GracePeriodSeconds: new(int64),

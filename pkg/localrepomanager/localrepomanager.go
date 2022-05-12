@@ -165,7 +165,7 @@ func (lrm *LocalRepoManager) startJob() {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier)
+	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier, true)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
 	}
