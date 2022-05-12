@@ -41,6 +41,11 @@ type Jobmanager struct {
 	jobnotifiers     map[string]jobnotifier
 }
 
+type PVClaimMountRef struct {
+	PVClaimName string
+	MountPath   string
+}
+
 // Newjobmanager is a factory method to create a new instanace of a job manager
 func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
 	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config, namespace)
@@ -172,6 +177,16 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 			}
 		},
 	}
+}
+
+func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) string {
+	kl.FindpvClaimByName(jm.currentClientset, pvname, namespace)
+	return ""
+}
+
+func (jm *Jobmanager) CreatePvCMountReference(a string, b string) PVClaimMountRef {
+	claim := PVClaimMountRef{}
+	return claim
 }
 
 // CreateJob makes a new job

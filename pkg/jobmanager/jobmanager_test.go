@@ -48,21 +48,22 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func RunTestJob(completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
-	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) batchv1.Job {
-	// SkipCI(t)
+func GetJobManager(t *testing.T) (*Jobmanager, string) {
 	c := getTestConfig(t)
 	const ns = "testns"
 	jm, err := Newjobmanager(c, ns)
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
-	defer jm.Close()
-	if err != nil {
-		t.Fatalf("Unable to create JobManager")
-	}
+	return jm, ns
+}
 
-	_, err = jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false)
+func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
+	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType), mountlist []PVClaimMountRef) batchv1.Job {
+	// SkipCI(t)
+	defer jm.Close()
+
+	_, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false)
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
@@ -77,42 +78,6 @@ func RunTestJob(completechannel chan batchv1.Job, deletechannel chan batchv1.Job
 	<-deletechannel
 
 	return outputjob
-}
-
-// TODO test autodelete
-
-// TODO test find volumes
-
-// TODO test mount volumes
-
-func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
-	c, err := GetConfigOutofCluster(configpath)
-	if err != nil {
-		t.Fatalf("Couldn't get config %v", err)
-	}
-	return c
-}
-
-func TestCreateAndSucceed(t *testing.T) {
-	t.Logf("TestCreateAndSucceed")
-	// SkipCI(t)
-	completechannel, deletechannel, notifier := getNotifier()
-	outputjob := RunTestJob(completechannel, deletechannel, t, nil, notifier)
-	if outputjob.Status.Succeeded != 1 {
-		t.Fatalf("Jobs didn't succeed")
-	}
-}
-
-func TestCreateAndErrorWork(t *testing.T) {
-	t.Logf("TestCreateAndSucceed")
-	// SkipCI(t)
-	completechannel, deletechannel, notifier := getNotifier()
-	command := []string{"error"}
-	outputjob := RunTestJob(completechannel, deletechannel, t, command, notifier)
-	if outputjob.Status.Failed != 1 {
-		t.Fatalf("Jobs didn't fail")
-	}
 }
 
 func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, typee ResourseStateType)) {
@@ -142,6 +107,64 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 		}
 	})
 	return completechannel, deletechannel, notifier
+}
+
+// TODO test autodelete
+
+// TODO test find volumes
+
+// TODO test mount volumes
+
+func getTestConfig(t *testing.T) *rest.Config {
+	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
+	c, err := GetConfigOutofCluster(configpath)
+	if err != nil {
+		t.Fatalf("Couldn't get config %v", err)
+	}
+	return c
+}
+
+func TestCreateAndSucceed(t *testing.T) {
+	t.Logf("TestCreateAndSucceed")
+	// SkipCI(t)
+	completechannel, deletechannel, notifier := getNotifier()
+	jm, ns := GetJobManager(t)
+	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
+	if outputjob.Status.Succeeded != 1 {
+		t.Fatalf("Jobs didn't succeed")
+	}
+}
+
+func TestCreateAndErrorWork(t *testing.T) {
+	t.Logf("TestCreateAndSucceed")
+	// SkipCI(t)
+	completechannel, deletechannel, notifier := getNotifier()
+	command := []string{"error"}
+	jm, ns := GetJobManager(t)
+	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
+	if outputjob.Status.Failed != 1 {
+		t.Fatalf("Jobs didn't fail")
+	}
+}
+
+func TestCreateJobwithVolumes(t *testing.T) {
+	t.Logf("TestCreateJobwithVolumes")
+	// SkipCI(t)
+	completechannel, deletechannel, notifier := getNotifier()
+	// find render vol by name
+	jm, ns := GetJobManager(t)
+	render := jm.FindpvClaimByName("render", ns)
+	source := jm.FindpvClaimByName("source", ns)
+	renderref := jm.CreatePvCMountReference(render, "/site")
+	srcref := jm.CreatePvCMountReference(source, "/src")
+	refs := []PVClaimMountRef{renderref, srcref}
+
+	// find source vol by name
+	// create volumemount with name and path
+	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, refs)
+	if outputjob.Status.Succeeded != 1 {
+		t.Fatalf("Jobs didn't succeed")
+	}
 }
 
 func TestGetConfig(t *testing.T) {

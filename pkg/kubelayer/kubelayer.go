@@ -87,29 +87,7 @@ func CreateJob(clientset kubernetes.Interface,
 	return job, nil
 }
 
-//nolint
-func getVolumes(sourcename string, rendername string) []apiv1.Volume {
-	return []apiv1.Volume{
-		{
-			Name: "blogsource",
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: sourcename,
-					ReadOnly:  true,
-				},
-			},
-		},
-		{
-			Name: "blogrender",
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: rendername,
-				},
-			},
-		},
-	}
-}
-
+//should take an array of volume name and mount path struct
 func getContainers(name string, image string) []apiv1.Container {
 	return []apiv1.Container{
 		{
@@ -135,8 +113,12 @@ func getContainers(name string, image string) []apiv1.Container {
 	}
 }
 
+func FindpvClaimByName(clientset kubernetes.Interface, pvname, namespace string) {
+
+}
+
 // Findpvnames fines persistent volumes by name
-func Findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
+func findpvClaimnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
 	var sourcename string
 	var rendername string
 
@@ -154,6 +136,31 @@ func Findpvnames(clientset kubernetes.Interface, namespace string) (string, stri
 		}
 	}
 	return sourcename, rendername, nil
+}
+
+//nolint
+//should take array of pv names
+func getVolumes(sourcename string, rendername string) []apiv1.Volume {
+	return []apiv1.Volume{
+		{
+			// PV1
+			Name: "blogsource",
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: sourcename,
+					ReadOnly:  true,
+				},
+			},
+		},
+		{
+			Name: "blogrender",
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: rendername,
+				},
+			},
+		},
+	}
 }
 
 // DeleteJob deletes an existing job resource
