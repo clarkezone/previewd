@@ -14,9 +14,9 @@ import (
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
-const (
-	jobttlsecondsafterfinished int32 = 1
-)
+// const (
+//	jobttlsecondsafterfinished int32 = 1
+// )
 
 // PingAPI tests if server is working
 func PingAPI(clientset kubernetes.Interface) {
@@ -43,7 +43,7 @@ func CreateJob(clientset kubernetes.Interface,
 	jobsClient := clientset.BatchV1().Jobs(namespace)
 
 	// sourcename, rendername, err := findpvnames(clientset, namespace)
-	//clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
+	// clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
 
 	// if err != nil {
 	//	clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
@@ -58,13 +58,13 @@ func CreateJob(clientset kubernetes.Interface,
 			Namespace: namespace,
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit:            int32Ptr(1),
-			//TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
+			BackoffLimit: int32Ptr(1),
+			// TTLSecondsAfterFinished: int32Ptr(jobttlsecondsafterfinished),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{},
 
 				Spec: apiv1.PodSpec{
-					//Volumes:       getVolumes(sourcename, rendername),
+					// Volumes:       getVolumes(sourcename, rendername),
 					Containers:    getContainers(name, image),
 					RestartPolicy: apiv1.RestartPolicyNever,
 				},
@@ -134,6 +134,7 @@ func getContainers(name string, image string) []apiv1.Container {
 	}
 }
 
+// Findpvnames fines persistent volumes by name
 func Findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
 	var sourcename string
 	var rendername string
