@@ -36,15 +36,16 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] use strongbox to encrypt config
   - [x] fix UT's in k3s
 - [ ] Create missing tests
-  - [ ] Pass in volumes, not hard coded
-  - [ ] Rebuild find names functionality via a test
-  - [ ] test mount volumes
+  - [x] Pass in volumes, not hard coded
+  - [x] Rebuild find names functionality via a test
+  - [x] test mount volumes
+  - [x] test for find volume
+- [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
+- [ ] cobra command hooked up for e2e flow
+- [ ] inegration test remainder
   - [ ] Test for autodelete
   - [ ] Run tests in default namespace for okteto compatibility
   - [ ] All integration tests can be run via `make integration`
-- [ ] update integration test to work in okteto, using default namespace
-- [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
-- [ ] cobra command hooked up for e2e flow
 - [ ] github action to configure okteto connection and call integration test using strongbox
 - [ ] can code coverage reflect integration test
 - [ ] verify metrics and logging in prom on k8s in okteto

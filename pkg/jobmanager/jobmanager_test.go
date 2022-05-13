@@ -17,9 +17,9 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/rest"
 
+	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
-	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 )
 
 var gitRoot string
@@ -110,10 +110,6 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 }
 
 // TODO test autodelete
-
-// TODO test find volumes
-
-// TODO test mount volumes
 
 func getTestConfig(t *testing.T) *rest.Config {
 	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
