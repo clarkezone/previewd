@@ -41,9 +41,10 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] test mount volumes
   - [x] test for find volume
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
+  - [ ] make `TestCreateJobwithVolumes` fail with current broken behavior
   - [ ] Create PersistentVolume and PersistentVolumeClaim imperitively
   - [ ] `TestCreateJobwithVolumes` test passes
-  - [ ] end2end logic called from test: clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
+  - [ ] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
 
 # End to end secenario for clone, webhook, render via job works from cmdline
 
