@@ -43,6 +43,7 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
 - [ ] cobra command hooked up for e2e flow
 - [ ] inegration test remainder
+  - [ ] `TestCreateJobwithVolumes` test shuold create test volumes
   - [ ] Test for autodelete
   - [ ] Run tests in default namespace for okteto compatibility
   - [ ] All integration tests can be run via `make integration`
