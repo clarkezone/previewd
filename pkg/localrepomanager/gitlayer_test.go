@@ -113,7 +113,7 @@ func TestPullBranch(t *testing.T) {
 		log.Fatal("pull failed")
 	}
 
-	const expectedcount = 22
+	const expectedcount = 23
 	if len(infos) != expectedcount { // One extra for .git
 		log.Fatalf("pull failed file mismatch error expected %v found %v", expectedcount, len(infos))
 	}
