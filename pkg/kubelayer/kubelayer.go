@@ -21,6 +21,7 @@ const (
 	volumeName = "vol"
 )
 
+// PVClaimMountRef is a reference used to identify PVCs
 type PVClaimMountRef struct {
 	PVClaimName string
 	MountPath   string
@@ -42,7 +43,6 @@ func CreateJob(clientset kubernetes.Interface,
 	name string,
 	namespace string, image string, command []string,
 	args []string, always bool, autoDelete bool, mountlist []PVClaimMountRef) (*batchv1.Job, error) {
-
 	clarkezoneLog.Debugf("CreateJob called with name %v namespace %v image %v command %v args %v always %v",
 		name, namespace, image, command, args, always)
 
@@ -106,8 +106,9 @@ func FindpvClaimByName(clientset kubernetes.Interface, pvname string, namespace 
 	return found, nil
 }
 
-//should take an array of volume name and mount path struct
-func getContainers(name string, image string, command []string, args []string, mountlist []PVClaimMountRef) []apiv1.Container {
+// getContainers returns containers based on name, command etc
+func getContainers(name string, image string, command []string,
+	args []string, mountlist []PVClaimMountRef) []apiv1.Container {
 	containerList := []apiv1.Container{}
 	volumeMountList := []apiv1.VolumeMount{}
 
@@ -139,9 +140,8 @@ func getContainers(name string, image string, command []string, args []string, m
 	return containerList
 }
 
-//should take array of pv names
+// getVolumes returns volumes based on mount refs
 func getVolumes(mountlist []PVClaimMountRef) []apiv1.Volume {
-
 	volumelist := []apiv1.Volume{}
 
 	for i, mountitem := range mountlist {

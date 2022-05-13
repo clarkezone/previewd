@@ -14,7 +14,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	kl "github.com/clarkezone/previewd/pkg/kubelayer"
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -177,15 +176,16 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 
 // FindpvClaimByName searches for a persistentvolumeclaim by name
 func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string, error) {
-	return kl.FindpvClaimByName(jm.currentClientset, pvname, namespace)
+	return kubelayer.FindpvClaimByName(jm.currentClientset, pvname, namespace)
 }
 
 // CreatePvCMountReference creates a reference based on name and mountpoint
-func (jm *Jobmanager) CreatePvCMountReference(claimname string, MountPath string, ReadOnly bool) kubelayer.PVClaimMountRef {
+func (jm *Jobmanager) CreatePvCMountReference(claimname string,
+	mountPath string, readOnly bool) kubelayer.PVClaimMountRef {
 	claim := kubelayer.PVClaimMountRef{}
 	claim.PVClaimName = claimname
-	claim.MountPath = MountPath
-	claim.ReadOnly = ReadOnly
+	claim.MountPath = mountPath
+	claim.ReadOnly = readOnly
 	return claim
 }
 
@@ -193,10 +193,12 @@ func (jm *Jobmanager) CreatePvCMountReference(claimname string, MountPath string
 func (jm *Jobmanager) CreateJob(name string, namespace string,
 	image string, command []string, args []string, notifier jobnotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
-	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v, image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
+	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v,"+
+		"image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
 		name, namespace, image, command, args, notifier, autoDelete, mountlist)
-	//TODO: if job exists, delete it
-	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true, autoDelete, mountlist)
+	// TODO: if job exists, delete it
+	job, err := kubelayer.CreateJob(jm.currentClientset, name, namespace,
+		image, command, args, true, autoDelete, mountlist)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +211,7 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 // DeleteJob deletes a job
 func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
 	clarkezoneLog.Debugf("DeleteJob() called with name:%v namespace:%v", name, namespace)
-	return kl.DeleteJob(jm.currentClientset, name, namespace)
+	return kubelayer.DeleteJob(jm.currentClientset, name, namespace)
 }
 
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster

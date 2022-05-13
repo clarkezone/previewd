@@ -144,6 +144,7 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 	return nil
 }
 
+// nolint
 func (lrm *LocalRepoManager) startJob() {
 	if lrm.jm == nil {
 		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
