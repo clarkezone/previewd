@@ -171,20 +171,28 @@ func TestFindVolumeFail(t *testing.T) {
 
 func TestCreateJobwithVolumes(t *testing.T) {
 	t.Logf("TestCreateJobwithVolumes")
-	// SkipCI(t)
+	const rendername = "render"
+	const sourcename = "source"
+	const namespace = "jekyllpreviewv2"
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	jm, ns := GetJobManager(t, "jekyllpreview2")
-	render, err := jm.FindpvClaimByName("render", ns)
+	jm, ns := GetJobManager(t, namespace)
+	render, err := jm.FindpvClaimByName(rendername, ns)
 	if err != nil {
 		t.Fatalf("can't find pvcalim render %v", err)
 	}
-	source, err := jm.FindpvClaimByName("source", ns)
+	if render == "" {
+		t.Fatalf("render name empty")
+	}
+	source, err := jm.FindpvClaimByName(sourcename, ns)
 	if err != nil {
 		t.Fatalf("can't find pvcalim source %v", err)
 	}
-	renderref := jm.CreatePvCMountReference(render, "/site")
-	srcref := jm.CreatePvCMountReference(source, "/src")
+	if source == "" {
+		t.Fatalf("source name empty")
+	}
+	renderref := jm.CreatePvCMountReference(render, "/site", false)
+	srcref := jm.CreatePvCMountReference(source, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 
 	// find source vol by name

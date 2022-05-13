@@ -181,8 +181,11 @@ func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string
 }
 
 // CreatePvCMountReference creates a reference based on name and mountpoint
-func (jm *Jobmanager) CreatePvCMountReference(a string, b string) kubelayer.PVClaimMountRef {
+func (jm *Jobmanager) CreatePvCMountReference(claimname string, MountPath string, ReadOnly bool) kubelayer.PVClaimMountRef {
 	claim := kubelayer.PVClaimMountRef{}
+	claim.PVClaimName = claimname
+	claim.MountPath = MountPath
+	claim.ReadOnly = ReadOnly
 	return claim
 }
 
