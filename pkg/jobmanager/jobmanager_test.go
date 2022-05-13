@@ -19,6 +19,7 @@ import (
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
+	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 )
 
 var gitRoot string
@@ -58,11 +59,11 @@ func GetJobManager(t *testing.T, ns string) (*Jobmanager, string) {
 }
 
 func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
-	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType), mountlist []PVClaimMountRef) batchv1.Job {
+	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType), mountlist []kubelayer.PVClaimMountRef) batchv1.Job {
 	// SkipCI(t)
 	defer jm.Close()
 
-	_, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false)
+	_, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false, mountlist)
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
@@ -188,7 +189,7 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	}
 	renderref := jm.CreatePvCMountReference(render, "/site")
 	srcref := jm.CreatePvCMountReference(source, "/src")
-	refs := []PVClaimMountRef{renderref, srcref}
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 
 	// find source vol by name
 	// create volumemount with name and path

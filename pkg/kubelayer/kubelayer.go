@@ -18,6 +18,10 @@ import (
 // const (
 //	jobttlsecondsafterfinished int32 = 1
 // )
+type PVClaimMountRef struct {
+	PVClaimName string
+	MountPath   string
+}
 
 // PingAPI tests if server is working
 func PingAPI(clientset kubernetes.Interface) {
@@ -33,23 +37,17 @@ func PingAPI(clientset kubernetes.Interface) {
 func CreateJob(clientset kubernetes.Interface,
 	name string,
 	namespace string, image string, command []string,
-	args []string, always bool, autoDelete bool) (*batchv1.Job, error) {
-	// TODO use default namespace if empty
-	// TODO switch tests to call with empty
-	// FIX
+	args []string, always bool, autoDelete bool, mountlist []PVClaimMountRef) (*batchv1.Job, error) {
 
 	clarkezoneLog.Debugf("CreateJob called with name %v namespace %v image %v command %v args %v always %v",
 		name, namespace, image, command, args, always)
 
-	jobsClient := clientset.BatchV1().Jobs(namespace)
-
-	// sourcename, rendername, err := findpvnames(clientset, namespace)
-	// clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
-
-	// if err != nil {
-	//	clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
-	//	return nil, err
-	// }
+	var jobsClient v1.JobInterface
+	if namespace == "" {
+		jobsClient = clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
+	} else {
+		jobsClient = clientset.BatchV1().Jobs(namespace)
+	}
 
 	// TODO hook up pull policy
 	job := &batchv1.Job{

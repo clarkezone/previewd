@@ -3,6 +3,7 @@ package localrepomanager
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"regexp"
@@ -165,7 +166,8 @@ func (lrm *LocalRepoManager) startJob() {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier, true)
+	log.Fatalf("fix this")
+	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier, true, nil)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
 	}

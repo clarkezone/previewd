@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	kl "github.com/clarkezone/previewd/pkg/kubelayer"
+	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
@@ -39,11 +40,6 @@ type Jobmanager struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	jobnotifiers     map[string]jobnotifier
-}
-
-type PVClaimMountRef struct {
-	PVClaimName string
-	MountPath   string
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
@@ -185,18 +181,19 @@ func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string
 }
 
 // CreatePvCMountReference creates a reference based on name and mountpoint
-func (jm *Jobmanager) CreatePvCMountReference(a string, b string) PVClaimMountRef {
-	claim := PVClaimMountRef{}
+func (jm *Jobmanager) CreatePvCMountReference(a string, b string) kubelayer.PVClaimMountRef {
+	claim := kubelayer.PVClaimMountRef{}
 	return claim
 }
 
 // CreateJob makes a new job
 func (jm *Jobmanager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier, autoDelete bool) (*batchv1.Job, error) {
-	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v, image:%v, command:%v, args:%v, notifier:%v",
-		name, namespace, image, command, args, notifier)
+	image string, command []string, args []string, notifier jobnotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v, image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
+		name, namespace, image, command, args, notifier, autoDelete, mountlist)
 	//TODO: if job exists, delete it
-	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true, autoDelete)
+	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true, autoDelete, mountlist)
 	if err != nil {
 		return nil, err
 	}
