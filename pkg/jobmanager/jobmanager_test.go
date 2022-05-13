@@ -48,9 +48,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func GetJobManager(t *testing.T) (*Jobmanager, string) {
+func GetJobManager(t *testing.T, ns string) (*Jobmanager, string) {
 	c := getTestConfig(t)
-	const ns = "testns"
 	jm, err := Newjobmanager(c, ns)
 	if err != nil {
 		t.Errorf("job manager create failed")
@@ -128,7 +127,7 @@ func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
-	jm, ns := GetJobManager(t)
+	jm, ns := GetJobManager(t, "testns")
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
@@ -140,10 +139,36 @@ func TestCreateAndErrorWork(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	jm, ns := GetJobManager(t)
+	jm, ns := GetJobManager(t, "testns")
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
+	}
+}
+
+func TestFindVolumeSuccess(t *testing.T) {
+	const name = "render"
+	const namespace = "jekyllpreviewv2"
+	jm, ns := GetJobManager(t, namespace)
+	render, err := jm.FindpvClaimByName(name, ns)
+	if err != nil {
+		t.Fatalf("can't find pvcalim render %v", err)
+	}
+	if render == "" {
+		t.Fatalf("didn't find render volume %v in namespace %v", name, namespace)
+	}
+}
+
+func TestFindVolumeFail(t *testing.T) {
+	const name = "notexists"
+	const namespace = "jekyllpreviewv2"
+	jm, ns := GetJobManager(t, namespace)
+	render, err := jm.FindpvClaimByName(name, ns)
+	if err != nil {
+		t.Fatalf("error finding pvcalim %v: %v", name, err)
+	}
+	if render != "" {
+		t.Fatalf("render should be nil")
 	}
 }
 
@@ -152,9 +177,15 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	jm, ns := GetJobManager(t)
-	render := jm.FindpvClaimByName("render", ns)
-	source := jm.FindpvClaimByName("source", ns)
+	jm, ns := GetJobManager(t, "jekyllpreview2")
+	render, err := jm.FindpvClaimByName("render", ns)
+	if err != nil {
+		t.Fatalf("can't find pvcalim render %v", err)
+	}
+	source, err := jm.FindpvClaimByName("source", ns)
+	if err != nil {
+		t.Fatalf("can't find pvcalim source %v", err)
+	}
 	renderref := jm.CreatePvCMountReference(render, "/site")
 	srcref := jm.CreatePvCMountReference(source, "/src")
 	refs := []PVClaimMountRef{renderref, srcref}

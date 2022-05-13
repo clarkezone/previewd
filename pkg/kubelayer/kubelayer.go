@@ -113,8 +113,21 @@ func getContainers(name string, image string) []apiv1.Container {
 	}
 }
 
-func FindpvClaimByName(clientset kubernetes.Interface, pvname, namespace string) {
-
+// FindpvClaimByName searches for a PersistentVolumeClaim
+func FindpvClaimByName(clientset kubernetes.Interface, pvname string, namespace string) (string, error){
+	var found string
+	pvclient := clientset.CoreV1().PersistentVolumeClaims(namespace)
+	pvlist, err := pvclient.List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, item := range pvlist.Items {
+		if strings.Contains(item.ObjectMeta.Name, pvname) {
+			found = item.ObjectMeta.Name
+			break
+		}
+	}
+	return found, nil
 }
 
 // Findpvnames fines persistent volumes by name

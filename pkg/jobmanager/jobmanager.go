@@ -179,11 +179,12 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 	}
 }
 
-func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) string {
-	kl.FindpvClaimByName(jm.currentClientset, pvname, namespace)
-	return ""
+// FindpvClaimByName searches for a persistentvolumeclaim by name
+func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string, error) {
+	return kl.FindpvClaimByName(jm.currentClientset, pvname, namespace)
 }
 
+// CreatePvCMountReference creates a reference based on name and mountpoint
 func (jm *Jobmanager) CreatePvCMountReference(a string, b string) PVClaimMountRef {
 	claim := PVClaimMountRef{}
 	return claim
