@@ -12,35 +12,64 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 
 - [x] k8s basic manifests that can set log level, verify on picluster, okteto manifests
 
-# Port webhook and dependencies
+# Port webhook and dependencies from jekyllpreview prototype repo
 
-- [ ] port all packages
-
+- [x] port all packages
   - [x] JobManager
   - [x] Kubelayer
   - [x] local resource manager
   - [x] port lrm to new logging
   - [x] port kubelayer to new logging
   - [x] port webhook listener
-  - [x] add logging and metrics to listener using middleware - [x] workout how to bucket counters by successtype - [x] Fix endpoint in duration - [x] parameterize metrics names in middleware - [x] Fix /metrics in testserver to hook in basicserver - [x] Add logging and metrics to webhook - [x] ensure test coverage for middleware
-        Makefile command to trigger k8s integration test working against dev cluster
-        Integration test to test job in okteto default namespace
-
+  - [x] add logging and metrics to listener using middleware
+    - [x] workout how to bucket counters by successtype
+    - [x] Fix endpoint in duration
+    - [x] parameterize metrics names in middleware
+    - [x] Fix /metrics in testserver to hook in basicserver
+    - [x] Add logging and metrics to webhook
+    - [x] ensure test coverage for middleware
+- [x] Support out of cluster kubeconfig from file in tests
+  - [x] makefile integration tests using tags
+  - [x] k3s config checked in
+  - [x] NewJobManager works with file based config in tests
+  - [x] how to debug tests with tags
+  - [x] use strongbox to encrypt config
+  - [x] fix UT's in k3s
+- [ ] Create missing tests
+  - [x] Pass in volumes, not hard coded
+  - [x] Rebuild find names functionality via a test
+  - [x] test mount volumes
+  - [x] test for find volume
 - [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
-- [ ] update integration test to work in okteto with auto-detect
-- [ ] make command to call integration test
-- [ ] github action to configure okteto connection and call integration test
+  - [ ] make `TestCreateJobwithVolumes` fail with current broken behavior
+  - [ ] Create PersistentVolume and PersistentVolumeClaim imperitively
+  - [ ] `TestCreateJobwithVolumes` test passes
+  - [ ] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
+
+# End to end secenario for clone, webhook, render via job works from cmdline
+
+- [ ] port main function from jekyllpreview prototype repo into cobra commands
+- [ ] update readme to reflect how to run helloworld
+
+# Integration tests run in Github Actions for PR's
+
+- [ ] inegration test remainder
+  - [ ] Test for autodelete
+  - [ ] Run tests in default namespace for okteto compatibility
+  - [ ] All integration tests can be run via `make integration`
+- [ ] github action to configure okteto connection and call integration test using strongbox
 - [ ] can code coverage reflect integration test
 - [ ] verify metrics and logging in prom on k8s in okteto
 
-# Port initial clone
-
-- [ ] port main function into cobra commands
-
 # Port Preview server
+
+- [ ] port sharemanager from jekyllpreview prototype repo
+- [ ] branch mode
+- [ ] end to end works in kind and or minikube
 
 # Backlog
 
 - [ ] Badge for docker image build
 - [ ] Look at codecov as alternative for coverlet
 - [ ] precommit calls golangci-lint
+- [ ] add dev container

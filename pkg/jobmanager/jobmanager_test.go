@@ -1,18 +1,39 @@
+//go:build integration
+// +build integration
+
+// to setup vscode for debugging integration tests see:
+// https://www.ryanchapin.com/configuring-vscode-to-use-build-tags-in-golang-to-separate-integration-and-unit-test-code/
+
 package jobmanager
 
 import (
 	"log"
 	"os"
+	"os/exec"
+	"path"
+	"strings"
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/fake"
-	clienttesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/rest"
 
+	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
 )
+
+var gitRoot string
+
+func setup() {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		panic("couldn't read output from git command get gitroot")
+	}
+	gitRoot = string(output)
+	gitRoot = strings.TrimSuffix(gitRoot, "\n")
+}
 
 func SkipCI(t *testing.T) {
 	if os.Getenv("TEST_JEKPREV_TESTLOCALK8S") == "" {
@@ -23,128 +44,173 @@ func SkipCI(t *testing.T) {
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
 	clarkezoneLog.Init(logrus.DebugLevel)
+	setup()
 	code := m.Run()
 	os.Exit(code)
 }
 
-func RunTestJob(completechannel chan struct{}, deletechannel chan struct{},
-	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType)) {
-	SkipCI(t)
-	jm, err := Newjobmanager(false, "testns")
+func GetJobManager(t *testing.T, ns string) (*Jobmanager, string) {
+	c := getTestConfig(t)
+	jm, err := Newjobmanager(c, ns)
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
-	defer jm.Close()
-	if err != nil {
-		t.Fatalf("Unable to create JobManager")
-	}
+	return jm, ns
+}
 
-	_, err = jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier)
+func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
+	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType), mountlist []kubelayer.PVClaimMountRef) batchv1.Job {
+	// SkipCI(t)
+	defer jm.Close()
+
+	_, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false, mountlist)
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
-	<-completechannel
+	outputjob := <-completechannel
+
 	log.Println("Completed; attempting delete")
-	err = jm.DeleteJob("alpinetest")
+	err = jm.DeleteJob("alpinetest", ns)
 	if err != nil {
 		t.Fatalf("Unable to delete job %v", err)
 	}
 	log.Println(("Deleted."))
 	<-deletechannel
+
+	return outputjob
+}
+
+func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, typee ResourseStateType)) {
+	completechannel := make(chan batchv1.Job)
+	deletechannel := make(chan batchv1.Job)
+	notifier := (func(job *batchv1.Job, typee ResourseStateType) {
+		clarkezoneLog.Debugf("Got job in outside world %v", typee)
+
+		if completechannel != nil && typee == Update && job.Status.Failed > 0 {
+			clarkezoneLog.Debugf("Job failed")
+			completechannel <- *job
+			close(completechannel)
+			completechannel = nil // avoid double close
+		}
+
+		if completechannel != nil && typee == Update && job.Status.Succeeded > 0 {
+			clarkezoneLog.Debugf("Job succeeded")
+			completechannel <- *job
+			close(completechannel)
+			completechannel = nil // avoid double close
+		}
+
+		if typee == Delete && deletechannel != nil {
+			log.Printf("Deleted")
+			close(deletechannel)
+			deletechannel = nil
+		}
+	})
+	return completechannel, deletechannel, notifier
+}
+
+// TODO test autodelete
+
+func getTestConfig(t *testing.T) *rest.Config {
+	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
+	c, err := GetConfigOutofCluster(configpath)
+	if err != nil {
+		t.Fatalf("Couldn't get config %v", err)
+	}
+	return c
 }
 
 func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
-	SkipCI(t)
-	completechannel := make(chan struct{})
-	deletechannel := make(chan struct{})
-	notifier := (func(job *batchv1.Job, typee ResourseStateType) {
-		log.Printf("Got job in outside world %v", typee)
-
-		if completechannel != nil && typee == Update && job.Status.Active == 0 && job.Status.Failed > 0 {
-			log.Printf("Error detected")
-			close(completechannel)
-			completechannel = nil // avoid double close
-		}
-
-		if typee == Delete {
-			log.Printf("Deleted")
-			close(deletechannel)
-		}
-	})
-	command := []string{"error"}
-	RunTestJob(completechannel, deletechannel, t, command, notifier)
+	// SkipCI(t)
+	completechannel, deletechannel, notifier := getNotifier()
+	jm, ns := GetJobManager(t, "testns")
+	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
+	if outputjob.Status.Succeeded != 1 {
+		t.Fatalf("Jobs didn't succeed")
+	}
 }
 
-func TestCreateAndFail(t *testing.T) {
-	t.Logf("TestCreateAndFail")
-	SkipCI(t)
-	client := fake.NewSimpleClientset()
-	client.PrependWatchReactor("*", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-		gvr := action.GetResource()
-		ns := action.GetNamespace()
-		watch, err := client.Tracker().Watch(gvr, ns)
-		if err != nil {
-			return false, nil, err
-		}
-		return false, watch, nil
-	})
-
-	jm, err := newjobmanagerwithclient(false, client, "testns")
-	if err != nil {
-		t.Errorf("error")
-	}
-	defer jm.Close()
-	if err != nil {
-		t.Fatalf("Unable to create JobManager")
-	}
-	completechannel := make(chan struct{})
-	deletechannel := make(chan struct{})
-	notifier := (func(job *batchv1.Job, typee ResourseStateType) {
-		log.Printf("Got job in outside world %v Active %v Failed %v", typee, job.Status.Active, job.Status.Failed)
-
-		if completechannel != nil && typee == Update && job.Status.Active == 0 && job.Status.Failed > 0 {
-			log.Printf("Error detected")
-			close(completechannel)
-			completechannel = nil // avoid double close
-		}
-
-		if typee == Delete {
-			log.Printf("Deleted")
-			close(deletechannel)
-		}
-	})
+func TestCreateAndErrorWork(t *testing.T) {
+	t.Logf("TestCreateAndSucceed")
+	// SkipCI(t)
+	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	_, err = jm.CreateJob("alpinetest", "", "alpine", command, nil, notifier)
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
+	jm, ns := GetJobManager(t, "testns")
+	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
+	if outputjob.Status.Failed != 1 {
+		t.Fatalf("Jobs didn't fail")
 	}
-	<-completechannel
-	log.Println("Completed; attempting delete")
-	err = jm.DeleteJob("alpinetest")
+}
+
+func TestFindVolumeSuccess(t *testing.T) {
+	const name = "render"
+	const namespace = "jekyllpreviewv2"
+	jm, ns := GetJobManager(t, namespace)
+	render, err := jm.FindpvClaimByName(name, ns)
 	if err != nil {
-		t.Fatalf("Unable to delete job %v", err)
+		t.Fatalf("can't find pvcalim render %v", err)
 	}
-	log.Println(("Deleted."))
-	<-deletechannel
-	//TODO: [x] add delete function
-	//TODO: Move logic into test for succeeded / failed job incl delete.. does it work with mock
-	//TODO: ability to inject volumes
-	//TODO: support for namespace
-	//TODO:         verbose logging
-	//TODO:             Conditional log statements
-	//TODO:             Environment variable
-	//TODO: flag for job to autodelete
-	// TODO: test that verifies auto delete
-	// TODO: Ensure error if job with same name already exists
+	if render == "" {
+		t.Fatalf("didn't find render volume %v in namespace %v", name, namespace)
+	}
+}
+
+func TestFindVolumeFail(t *testing.T) {
+	const name = "notexists"
+	const namespace = "jekyllpreviewv2"
+	jm, ns := GetJobManager(t, namespace)
+	render, err := jm.FindpvClaimByName(name, ns)
+	if err != nil {
+		t.Fatalf("error finding pvcalim %v: %v", name, err)
+	}
+	if render != "" {
+		t.Fatalf("render should be nil")
+	}
+}
+
+func TestCreateJobwithVolumes(t *testing.T) {
+	t.Logf("TestCreateJobwithVolumes")
+	const rendername = "render"
+	const sourcename = "source"
+	const namespace = "jekyllpreviewv2"
+	completechannel, deletechannel, notifier := getNotifier()
+	// find render vol by name
+	jm, ns := GetJobManager(t, namespace)
+	render, err := jm.FindpvClaimByName(rendername, ns)
+	if err != nil {
+		t.Fatalf("can't find pvcalim render %v", err)
+	}
+	if render == "" {
+		t.Fatalf("render name empty")
+	}
+	source, err := jm.FindpvClaimByName(sourcename, ns)
+	if err != nil {
+		t.Fatalf("can't find pvcalim source %v", err)
+	}
+	if source == "" {
+		t.Fatalf("source name empty")
+	}
+	renderref := jm.CreatePvCMountReference(render, "/site", false)
+	srcref := jm.CreatePvCMountReference(source, "/src", true)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
+
+	// find source vol by name
+	// create volumemount with name and path
+	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, refs)
+	if outputjob.Status.Succeeded != 1 {
+		t.Fatalf("Jobs didn't succeed")
+	}
 }
 
 func TestGetConfig(t *testing.T) {
-	SkipCI(t)
+	// SkipCI(t)
 	t.Logf("TestGetConfig")
-	var _, err = GetConfig(false)
-	if err != nil {
-		t.Errorf("unable to create config")
+
+	c := getTestConfig(t)
+
+	if c == nil {
+		t.Fatalf("Unable to get config")
 	}
 	// TODO flag for job to autodelete
 	// TODO wait for error exit

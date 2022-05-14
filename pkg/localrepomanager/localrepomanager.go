@@ -3,6 +3,7 @@ package localrepomanager
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"regexp"
@@ -143,6 +144,7 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 	return nil
 }
 
+// nolint
 func (lrm *LocalRepoManager) startJob() {
 	if lrm.jm == nil {
 		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
@@ -165,7 +167,8 @@ func (lrm *LocalRepoManager) startJob() {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier)
+	log.Fatalf("fix this")
+	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier, true, nil)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
 	}

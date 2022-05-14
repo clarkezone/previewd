@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
-	kl "github.com/clarkezone/previewd/pkg/kubelayer"
+	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
@@ -42,12 +42,12 @@ type Jobmanager struct {
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
-func Newjobmanager(incluster bool, namespace string) (*Jobmanager, error) {
-	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", incluster, namespace)
-	jm, err := newjobmanagerinternal(incluster)
-	if err != nil {
-		return nil, err
+func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
+	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config, namespace)
+	if config == nil {
+		return nil, fmt.Errorf("config supplied is nil")
 	}
+	jm := newjobmanagerinternal(config)
 
 	clientset, err := kubernetes.NewForConfig(jm.currentConfig)
 	if err != nil {
@@ -67,13 +67,11 @@ func Newjobmanager(incluster bool, namespace string) (*Jobmanager, error) {
 	return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
 }
 
-func newjobmanagerwithclient(internal bool, clientset kubernetes.Interface, namespace string) (*Jobmanager, error) {
-	clarkezoneLog.Debugf("newjobmanagerwithclient called with incluster:%v, clientset:%v, namespace:%v",
-		internal, clientset, namespace)
-	jm, err := newjobmanagerinternal(internal)
-	if err != nil {
-		return nil, err
-	}
+// nolint
+func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (*Jobmanager, error) {
+	clarkezoneLog.Debugf("newjobmanagerwithclient called with clientset:%v, namespace:%v",
+		clientset, namespace)
+	jm := newjobmanagerinternal(nil)
 
 	jm.currentClientset = clientset
 
@@ -86,8 +84,8 @@ func newjobmanagerwithclient(internal bool, clientset kubernetes.Interface, name
 	return nil, fmt.Errorf("unable to create jobmanaer; startwatchers failed")
 }
 
-func newjobmanagerinternal(incluster bool) (*Jobmanager, error) {
-	clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", incluster)
+func newjobmanagerinternal(config *rest.Config) *Jobmanager {
+	clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
 	jm := Jobmanager{}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -95,12 +93,8 @@ func newjobmanagerinternal(incluster bool) (*Jobmanager, error) {
 	jm.cancel = cancel
 	jm.jobnotifiers = make(map[string]jobnotifier)
 
-	config, err := GetConfig(incluster)
-	if config == nil {
-		return nil, err
-	}
 	jm.currentConfig = config
-	return &jm, nil
+	return &jm
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
@@ -180,13 +174,31 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 	}
 }
 
+// FindpvClaimByName searches for a persistentvolumeclaim by name
+func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string, error) {
+	return kubelayer.FindpvClaimByName(jm.currentClientset, pvname, namespace)
+}
+
+// CreatePvCMountReference creates a reference based on name and mountpoint
+func (jm *Jobmanager) CreatePvCMountReference(claimname string,
+	mountPath string, readOnly bool) kubelayer.PVClaimMountRef {
+	claim := kubelayer.PVClaimMountRef{}
+	claim.PVClaimName = claimname
+	claim.MountPath = mountPath
+	claim.ReadOnly = readOnly
+	return claim
+}
+
 // CreateJob makes a new job
 func (jm *Jobmanager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier) (*batchv1.Job, error) {
-	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v, image:%v, command:%v, args:%v, notifier:%v",
-		name, namespace, image, command, args, notifier)
-	//TODO: if job exists, delete it
-	job, err := kl.CreateJob(jm.currentClientset, name, namespace, image, command, args, true)
+	image string, command []string, args []string, notifier jobnotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v,"+
+		"image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
+		name, namespace, image, command, args, notifier, autoDelete, mountlist)
+	// TODO: if job exists, delete it
+	job, err := kubelayer.CreateJob(jm.currentClientset, name, namespace,
+		image, command, args, true, autoDelete, mountlist)
 	if err != nil {
 		return nil, err
 	}
@@ -197,30 +209,33 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 }
 
 // DeleteJob deletes a job
-func (jm *Jobmanager) DeleteJob(name string) error {
-	clarkezoneLog.Debugf("DeleteJob() called with name:%v", name)
-	return kl.DeleteJob(jm.currentClientset, name)
+func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
+	clarkezoneLog.Debugf("DeleteJob() called with name:%v namespace:%v", name, namespace)
+	return kubelayer.DeleteJob(jm.currentClientset, name, namespace)
 }
 
-// GetConfig returns a config based on incluster, out of cluster
-func GetConfig(incluster bool) (*rest.Config, error) {
-	clarkezoneLog.Debugf("GetConfig() called with incluster:%v", incluster)
+// GetConfigIncluster returns a config that will work when caller is running in a k8s cluster
+func GetConfigIncluster() (*rest.Config, error) {
+	clarkezoneLog.Debugf("GetConfigIncluster() called with incluster")
 	var config *rest.Config
 	var err error
-	if incluster {
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			clarkezoneLog.Errorf("InClusterConfig() returned error %v", err)
-		}
-	} else {
-		// TODO enable flexible configuration of non-incluster config
-		kubepath := "/users/jamesclarke/.kube/config"
-		var kubeconfig = &kubepath
-		// use the current context in kubeconfig
-		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
-		if err != nil {
-			clarkezoneLog.Errorf("BuildConfigFromFlags() failed with %v", err)
-		}
+	config, err = rest.InClusterConfig()
+	if err != nil {
+		clarkezoneLog.Errorf("InClusterConfig() returned error %v", err)
+	}
+	return config, err
+}
+
+// GetConfigOutofCluster returns a config loaded from the supplied path
+func GetConfigOutofCluster(kubepath string) (*rest.Config, error) {
+	clarkezoneLog.Debugf("GetConfigOutofCluster() called with kubepath:%v", kubepath)
+	var config *rest.Config
+	var err error
+	var kubeconfig = &kubepath
+	// use the current context in kubeconfig
+	config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		clarkezoneLog.Errorf("BuildConfigFromFlags() failed with %v", err)
 	}
 	return config, err
 }
