@@ -3,6 +3,7 @@ package kubelayer
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"k8s.io/client-go/kubernetes"
@@ -15,9 +16,17 @@ import (
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
-// const (
-//	jobttlsecondsafterfinished int32 = 1
-// )
+const (
+	//	jobttlsecondsafterfinished int32 = 1
+	volumeName = "vol"
+)
+
+// PVClaimMountRef is a reference used to identify PVCs
+type PVClaimMountRef struct {
+	PVClaimName string
+	MountPath   string
+	ReadOnly    bool
+}
 
 // PingAPI tests if server is working
 func PingAPI(clientset kubernetes.Interface) {
@@ -33,23 +42,16 @@ func PingAPI(clientset kubernetes.Interface) {
 func CreateJob(clientset kubernetes.Interface,
 	name string,
 	namespace string, image string, command []string,
-	args []string, always bool, autoDelete bool) (*batchv1.Job, error) {
-	// TODO use default namespace if empty
-	// TODO switch tests to call with empty
-	// FIX
-
+	args []string, always bool, autoDelete bool, mountlist []PVClaimMountRef) (*batchv1.Job, error) {
 	clarkezoneLog.Debugf("CreateJob called with name %v namespace %v image %v command %v args %v always %v",
 		name, namespace, image, command, args, always)
 
-	jobsClient := clientset.BatchV1().Jobs(namespace)
-
-	// sourcename, rendername, err := findpvnames(clientset, namespace)
-	// clarkezoneLog.Debugf("Got volume names sourcename %v rendername %v", sourcename, rendername)
-
-	// if err != nil {
-	//	clarkezoneLog.Errorf("CreateJob: findpvnames failed with %v", err)
-	//	return nil, err
-	// }
+	var jobsClient v1.JobInterface
+	if namespace == "" {
+		jobsClient = clientset.BatchV1().Jobs(apiv1.NamespaceDefault)
+	} else {
+		jobsClient = clientset.BatchV1().Jobs(namespace)
+	}
 
 	// TODO hook up pull policy
 	job := &batchv1.Job{
@@ -65,8 +67,8 @@ func CreateJob(clientset kubernetes.Interface,
 				ObjectMeta: metav1.ObjectMeta{},
 
 				Spec: apiv1.PodSpec{
-					// Volumes:       getVolumes(sourcename, rendername),
-					Containers:    getContainers(name, image),
+					Volumes:       getVolumes(mountlist),
+					Containers:    getContainers(name, image, command, args, mountlist),
 					RestartPolicy: apiv1.RestartPolicyNever,
 				},
 			},
@@ -87,73 +89,74 @@ func CreateJob(clientset kubernetes.Interface,
 	return job, nil
 }
 
-//nolint
-func getVolumes(sourcename string, rendername string) []apiv1.Volume {
-	return []apiv1.Volume{
-		{
-			Name: "blogsource",
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: sourcename,
-					ReadOnly:  true,
-				},
-			},
-		},
-		{
-			Name: "blogrender",
-			VolumeSource: apiv1.VolumeSource{
-				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-					ClaimName: rendername,
-				},
-			},
-		},
-	}
-}
-
-func getContainers(name string, image string) []apiv1.Container {
-	return []apiv1.Container{
-		{
-			Name:            name,
-			Image:           image,
-			ImagePullPolicy: "Always",
-			//TODO: command and args optional
-			//Command:         command,
-			//Args:            args,
-			//			VolumeMounts: []apiv1.VolumeMount{
-			//				{
-			//					Name:      "blogsource",
-			//					ReadOnly:  true,
-			//					MountPath: "/src",
-			//				},
-			//				{
-			//					Name:      "blogrender",
-			//					ReadOnly:  false,
-			//					MountPath: "/site",
-			//				},
-			//			},
-		},
-	}
-}
-
-// Findpvnames fines persistent volumes by name
-func Findpvnames(clientset kubernetes.Interface, namespace string) (string, string, error) {
-	var sourcename string
-	var rendername string
-
+// FindpvClaimByName searches for a PersistentVolumeClaim
+func FindpvClaimByName(clientset kubernetes.Interface, pvname string, namespace string) (string, error) {
+	var found string
 	pvclient := clientset.CoreV1().PersistentVolumeClaims(namespace)
 	pvlist, err := pvclient.List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	for _, item := range pvlist.Items {
-		if strings.Contains(item.ObjectMeta.Name, "render") {
-			rendername = item.ObjectMeta.Name
-		}
-		if strings.Contains(item.ObjectMeta.Name, "source") {
-			sourcename = item.ObjectMeta.Name
+		if strings.Contains(item.ObjectMeta.Name, pvname) {
+			found = item.ObjectMeta.Name
+			break
 		}
 	}
-	return sourcename, rendername, nil
+	return found, nil
+}
+
+// getContainers returns containers based on name, command etc
+func getContainers(name string, image string, command []string,
+	args []string, mountlist []PVClaimMountRef) []apiv1.Container {
+	containerList := []apiv1.Container{}
+	volumeMountList := []apiv1.VolumeMount{}
+
+	for i, mountitem := range mountlist {
+		volumeMountList = append(volumeMountList, apiv1.VolumeMount{
+			Name:      fmt.Sprintf("%v%v", volumeName, i),
+			ReadOnly:  mountitem.ReadOnly,
+			MountPath: mountitem.MountPath,
+		},
+		)
+	}
+	container := apiv1.Container{
+		Name:            name,
+		Image:           image,
+		ImagePullPolicy: "Always",
+		VolumeMounts:    volumeMountList,
+	}
+
+	if command != nil {
+		container.Command = command
+	}
+
+	if args != nil {
+		container.Args = args
+	}
+
+	containerList = append(containerList, container)
+
+	return containerList
+}
+
+// getVolumes returns volumes based on mount refs
+func getVolumes(mountlist []PVClaimMountRef) []apiv1.Volume {
+	volumelist := []apiv1.Volume{}
+
+	for i, mountitem := range mountlist {
+		volumelist = append(volumelist, apiv1.Volume{
+			Name: fmt.Sprintf("%v%v", volumeName, i),
+			VolumeSource: apiv1.VolumeSource{
+				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+					ClaimName: mountitem.PVClaimName,
+					ReadOnly:  mountitem.ReadOnly,
+				},
+			},
+		})
+	}
+
+	return volumelist
 }
 
 // DeleteJob deletes an existing job resource

@@ -12,7 +12,7 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 
 - [x] k8s basic manifests that can set log level, verify on picluster, okteto manifests
 
-# Port webhook and dependencies
+# Port webhook and dependencies from jekyllpreview prototype repo
 
 - [x] port all packages
   - [x] JobManager
@@ -36,27 +36,40 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] use strongbox to encrypt config
   - [x] fix UT's in k3s
 - [ ] Create missing tests
-  - [ ] Pass in volumes, not hard coded
-  - [ ] Rebuild find names functionality via a test
-  - [ ] test mount volumes
+  - [x] Pass in volumes, not hard coded
+  - [x] Rebuild find names functionality via a test
+  - [x] test mount volumes
+  - [x] test for find volume
+- [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
+  - [ ] make `TestCreateJobwithVolumes` fail with current broken behavior
+  - [ ] Create PersistentVolume and PersistentVolumeClaim imperitively
+  - [ ] `TestCreateJobwithVolumes` test passes
+  - [ ] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
+
+# End to end secenario for clone, webhook, render via job works from cmdline
+
+- [ ] port main function from jekyllpreview prototype repo into cobra commands
+- [ ] update readme to reflect how to run helloworld
+
+# Integration tests run in Github Actions for PR's
+
+- [ ] inegration test remainder
   - [ ] Test for autodelete
   - [ ] Run tests in default namespace for okteto compatibility
   - [ ] All integration tests can be run via `make integration`
-- [ ] update integration test to work in okteto, using default namespace
-- [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
-- [ ] cobra command hooked up for e2e flow
 - [ ] github action to configure okteto connection and call integration test using strongbox
 - [ ] can code coverage reflect integration test
 - [ ] verify metrics and logging in prom on k8s in okteto
 
-# Port initial clone
-
-- [ ] port main function into cobra commands
-
 # Port Preview server
+
+- [ ] port sharemanager from jekyllpreview prototype repo
+- [ ] branch mode
+- [ ] end to end works in kind and or minikube
 
 # Backlog
 
 - [ ] Badge for docker image build
 - [ ] Look at codecov as alternative for coverlet
 - [ ] precommit calls golangci-lint
+- [ ] add dev container
