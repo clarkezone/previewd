@@ -214,6 +214,12 @@ func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
 	return kubelayer.DeleteJob(jm.currentClientset, name, namespace)
 }
 
+// CreateVolume creates a new volume
+func (jm *Jobmanager) CreateVolume(name string, namespace string) error {
+	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
+	return kubelayer.CreateVolume(jm.currentClientset, name, namespace)
+}
+
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster
 func GetConfigIncluster() (*rest.Config, error) {
 	clarkezoneLog.Debugf("GetConfigIncluster() called with incluster")

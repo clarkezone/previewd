@@ -8,6 +8,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -173,6 +174,33 @@ func DeleteJob(clientset kubernetes.Interface, name string, namespace string) er
 		Preconditions:      &metav1.Preconditions{},
 	}
 	return jobsClient.Delete(context.TODO(), name, meta)
+}
+
+// CreateVolume creates a new volume
+func CreateVolume(clientset kubernetes.Interface, name string, namespace string) error {
+	var pvclient v1core.PersistentVolumeClaimInterface
+	if namespace == "" {
+		pvclient = clientset.CoreV1().PersistentVolumeClaims(apiv1.NamespaceDefault)
+	} else {
+		pvclient = clientset.CoreV1().PersistentVolumeClaims(namespace)
+	}
+
+	pvclaim := apiv1.PersistentVolumeClaim{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name
+		},
+		Spec:       apiv1.PersistentVolumeClaimSpec{
+			"StorageClassName": "Longhorn"
+		},
+		Status:     apiv1.PersistentVolumeClaimStatus{},
+	}
+
+	meta := metav1.CreateOptions{
+		TypeMeta: metav1.TypeMeta{},
+	}
+	pvclient.Create(context.TODO(), &pvclaim, meta)
+	return nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
