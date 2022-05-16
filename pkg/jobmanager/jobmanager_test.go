@@ -176,10 +176,24 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	t.Logf("TestCreateJobwithVolumes")
 	const rendername = "render"
 	const sourcename = "source"
-	const namespace = "jekyllpreviewv2"
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	jm, ns := GetJobManager(t, namespace)
+	jm, ns := GetJobManager(t, testNamespace)
+
+	err := jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete persistent volume claim %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim(rendername, testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete persistent volume claim %v", err)
+	}
 	render, err := jm.FindpvClaimByName(rendername, ns)
 	if err != nil {
 		t.Fatalf("can't find pvcalim render %v", err)
@@ -225,7 +239,7 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 		t.Fatalf("unable to create namespace %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim("foobar", testNamespace)
+	err = jm.CreatePersistentVolumeClaim("source", testNamespace)
 	if err != nil {
 		t.Fatalf("unable to delete persistent volume claim %v", err)
 	}
