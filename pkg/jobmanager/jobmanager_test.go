@@ -187,12 +187,12 @@ func TestCreateJobwithVolumes(t *testing.T) {
 
 	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
 	if err != nil {
-		t.Fatalf("unable to delete persistent volume claim %v", err)
+		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
 
 	err = jm.CreatePersistentVolumeClaim(rendername, testNamespace)
 	if err != nil {
-		t.Fatalf("unable to delete persistent volume claim %v", err)
+		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
 	render, err := jm.FindpvClaimByName(rendername, ns)
 	if err != nil {
@@ -241,7 +241,7 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 
 	err = jm.CreatePersistentVolumeClaim("source", testNamespace)
 	if err != nil {
-		t.Fatalf("unable to delete persistent volume claim %v", err)
+		t.Fatalf("unable to creates persistent volume claim %v", err)
 	}
 
 	err = jm.DeleteNamespace(testNamespace)
