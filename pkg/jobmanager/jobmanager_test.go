@@ -24,6 +24,11 @@ import (
 
 var gitRoot string
 
+const (
+	configPath    = "integration/secrets/k3s-c2.yaml"
+	testNamespace = "testns"
+)
+
 func setup() {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
 
@@ -63,7 +68,7 @@ func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, del
 	// SkipCI(t)
 	defer jm.Close()
 
-	_, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false, mountlist)
+	_, err := jm.CreateJob("alpinetest", testNamespace, "alpine", command, nil, notifier, false, mountlist)
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
@@ -109,10 +114,8 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 	return completechannel, deletechannel, notifier
 }
 
-// TODO test autodelete
-
 func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
+	configpath := path.Join(gitRoot, configPath)
 	c, err := GetConfigOutofCluster(configpath)
 	if err != nil {
 		t.Fatalf("Couldn't get config %v", err)
@@ -124,7 +127,7 @@ func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
-	jm, ns := GetJobManager(t, "testns")
+	jm, ns := GetJobManager(t, testNamespace)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
@@ -136,7 +139,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	jm, ns := GetJobManager(t, "testns")
+	jm, ns := GetJobManager(t, testNamespace)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
@@ -200,6 +203,18 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, refs)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
+	}
+}
+
+func TestCreateDeleteNs(t *testing.T) {
+	jm, _ := GetJobManager(t, testNamespace)
+	err := jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace")
+	}
+	err = jm.DeleteNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete namespace")
 	}
 }
 

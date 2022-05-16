@@ -221,6 +221,20 @@ func (jm *Jobmanager) CreateVolume(name string, namespace string) error {
 	return err
 }
 
+// CreateNamespace creates a new namespace
+func (jm *Jobmanager) CreateNamespace(namespace string) error {
+	clarkezoneLog.Debugf("CreateNamespace() called with namespace:%v", namespace)
+	_, err := kubelayer.CreateNamespace(jm.currentClientset, namespace)
+	return err
+}
+
+// DeleteNamespace deletes a namespace
+func (jm *Jobmanager) DeleteNamespace(namespace string) error {
+	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
+	_, err := kubelayer.CreateNamespace(jm.currentClientset, namespace)
+	return err
+}
+
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster
 func GetConfigIncluster() (*rest.Config, error) {
 	clarkezoneLog.Debugf("GetConfigIncluster() called with incluster")
