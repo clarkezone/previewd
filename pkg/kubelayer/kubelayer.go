@@ -12,6 +12,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
@@ -186,6 +187,8 @@ func CreatePersistentVolumeClaim(clientset kubernetes.Interface, name string,
 		pvclient = clientset.CoreV1().PersistentVolumeClaims(namespace)
 	}
 
+	var storageClass = "longhorn"
+
 	pvclaim := apiv1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
@@ -196,9 +199,14 @@ func CreatePersistentVolumeClaim(clientset kubernetes.Interface, name string,
 			Namespace: namespace,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
-			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
+			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					"storage": resource.MustParse("1Gi"),
+				},
+			},
 			VolumeName:       volumeName,
-			StorageClassName: new(string),
+			StorageClassName: &storageClass,
 		},
 	}
 
