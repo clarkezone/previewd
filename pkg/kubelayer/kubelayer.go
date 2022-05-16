@@ -187,7 +187,7 @@ func CreatePersistentVolumeClaim(clientset kubernetes.Interface, name string,
 		pvclient = clientset.CoreV1().PersistentVolumeClaims(namespace)
 	}
 
-	var storageClass = "longhorn"
+	storageClass := "longhorn"
 
 	pvclaim := apiv1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
