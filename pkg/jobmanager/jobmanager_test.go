@@ -210,11 +210,29 @@ func TestCreateDeleteNs(t *testing.T) {
 	jm, _ := GetJobManager(t, testNamespace)
 	err := jm.CreateNamespace(testNamespace)
 	if err != nil {
-		t.Fatalf("unable to create namespace")
+		t.Fatalf("unable to create namespace %v", err)
 	}
 	err = jm.DeleteNamespace(testNamespace)
 	if err != nil {
-		t.Fatalf("unable to delete namespace")
+		t.Fatalf("unable to delete namespace %v", err)
+	}
+}
+
+func TestCreatePersistentVolumeClaim(t *testing.T) {
+	jm, _ := GetJobManager(t, testNamespace)
+	err := jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim("foobar", testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete persistent volume claim %v", err)
+	}
+
+	err = jm.DeleteNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete namespace %v", err)
 	}
 }
 
@@ -235,7 +253,7 @@ func TestCreateJobExitsError(t *testing.T) {
 
 }
 
-// test for other objects created doesn't fire job completion
+// test for other objects created doesn't fire job completion due to already bound
 // test for simple job create and exit
 
 // test for job error state

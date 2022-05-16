@@ -214,8 +214,8 @@ func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
 	return kubelayer.DeleteJob(jm.currentClientset, name, namespace)
 }
 
-// CreateVolume creates a new volume
-func (jm *Jobmanager) CreateVolume(name string, namespace string) error {
+// CreatePersistentVolumeClaim creates a new persistentvolumeclaim
+func (jm *Jobmanager) CreatePersistentVolumeClaim(name string, namespace string) error {
 	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
 	_, err := kubelayer.CreatePersistentVolumeClaim(jm.currentClientset, name, namespace)
 	return err
@@ -231,7 +231,7 @@ func (jm *Jobmanager) CreateNamespace(namespace string) error {
 // DeleteNamespace deletes a namespace
 func (jm *Jobmanager) DeleteNamespace(namespace string) error {
 	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
-	_, err := kubelayer.CreateNamespace(jm.currentClientset, namespace)
+	err := kubelayer.DeleteNamespace(jm.currentClientset, namespace)
 	return err
 }
 

@@ -193,7 +193,7 @@ func CreatePersistentVolumeClaim(clientset kubernetes.Interface, name string,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: name,
+			Namespace: namespace,
 		},
 		Spec: apiv1.PersistentVolumeClaimSpec{
 			AccessModes:      []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
@@ -256,4 +256,3 @@ func int32Ptr(i int32) *int32 { return &i }
 
 // TODO: logging
 // TODO: fix namespaces
-// TODO: unit tests
