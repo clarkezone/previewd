@@ -217,7 +217,8 @@ func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
 // CreateVolume creates a new volume
 func (jm *Jobmanager) CreateVolume(name string, namespace string) error {
 	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
-	return kubelayer.CreateVolume(jm.currentClientset, name, namespace)
+	_, err := kubelayer.CreatePersistentVolumeClaim(jm.currentClientset, name, namespace)
+	return err
 }
 
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster
