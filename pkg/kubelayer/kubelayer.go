@@ -205,7 +205,6 @@ func CreatePersistentVolumeClaim(clientset kubernetes.Interface, name string,
 					"storage": resource.MustParse("1Gi"),
 				},
 			},
-			VolumeName:       volumeName,
 			StorageClassName: &storageClass,
 		},
 	}
