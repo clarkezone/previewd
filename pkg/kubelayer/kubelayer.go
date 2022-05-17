@@ -8,9 +8,11 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
@@ -175,4 +177,89 @@ func DeleteJob(clientset kubernetes.Interface, name string, namespace string) er
 	return jobsClient.Delete(context.TODO(), name, meta)
 }
 
+// CreatePersistentVolumeClaim executes create persistentvolumeclaim action against cluster referenced by clientset
+func CreatePersistentVolumeClaim(clientset kubernetes.Interface, name string,
+	namespace string) (*apiv1.PersistentVolumeClaim, error) {
+	var pvclient v1core.PersistentVolumeClaimInterface
+	if namespace == "" {
+		pvclient = clientset.CoreV1().PersistentVolumeClaims(apiv1.NamespaceDefault)
+	} else {
+		pvclient = clientset.CoreV1().PersistentVolumeClaims(namespace)
+	}
+
+	storageClass := "longhorn"
+
+	pvclaim := apiv1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PersistentVolumeClaim",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: apiv1.PersistentVolumeClaimSpec{
+			AccessModes: []apiv1.PersistentVolumeAccessMode{apiv1.ReadWriteMany},
+			Resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					"storage": resource.MustParse("1Gi"),
+				},
+			},
+			StorageClassName: &storageClass,
+		},
+	}
+
+	meta := metav1.CreateOptions{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PersistentVolumeClaim",
+			APIVersion: "v1",
+		},
+	}
+	return pvclient.Create(context.TODO(), &pvclaim, meta)
+}
+
+// DeletePersistentVolumeClaim executes delete persistentvolumeclaim action against cluster referenced by clientset
+func DeletePersistentVolumeClaim(clientset kubernetes.Interface, name string, namespace string) error {
+	var pvclient v1core.PersistentVolumeClaimInterface
+	if namespace == "" {
+		pvclient = clientset.CoreV1().PersistentVolumeClaims(apiv1.NamespaceDefault)
+	} else {
+		pvclient = clientset.CoreV1().PersistentVolumeClaims(namespace)
+	}
+
+	return pvclient.Delete(context.TODO(), name, *metav1.NewDeleteOptions(0))
+}
+
+// CreateNamespace executes create namespace action against cluster referenced by clientset
+func CreateNamespace(clientset kubernetes.Interface, name string) (*apiv1.Namespace, error) {
+	pvclient := clientset.CoreV1().Namespaces()
+
+	ns := &apiv1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Namespace",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: name,
+		},
+	}
+	meta := metav1.CreateOptions{}
+	created, err := pvclient.Create(context.TODO(), ns, meta)
+	if err != nil {
+		return nil, err
+	}
+	return created, nil
+}
+
+// DeleteNamespace executes delete namespace action against cluster referenced by clientset
+func DeleteNamespace(clientset kubernetes.Interface, name string) error {
+	pvclient := clientset.CoreV1().Namespaces()
+	err := pvclient.Delete(context.TODO(), name, *metav1.NewDeleteOptions(0))
+	return err
+}
+
 func int32Ptr(i int32) *int32 { return &i }
+
+// TODO: logging
+// TODO: fix namespaces
