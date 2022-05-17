@@ -2,6 +2,9 @@ package internal
 
 import (
 	"os"
+	"os/exec"
+	"path"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +29,7 @@ const (
 // TEST_GITLAYER_SECURECLONEPW=""
 // TEST_GITLAYER_TESTLOCALK8S=""
 
+// Getenv returns environment variables for use in tests
 func Getenv(t *testing.T) (string, string, string, string, string) {
 	repo := os.Getenv(testreponame)
 	localdr := os.Getenv(testlocaldirname)
@@ -37,4 +41,25 @@ func Getenv(t *testing.T) (string, string, string, string, string) {
 			repo, localdr, testbranchswitch)
 	}
 	return repo, localdr, testbranchswitch, reposecure, secureclonepw
+}
+
+// GitRoot is the root of current git repo used in testing
+var GitRoot string
+
+// SetupGitRoot finds the gitroot for this repo
+func SetupGitRoot() {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		panic("couldn't read output from git command get gitroot")
+	}
+	GitRoot = string(output)
+	GitRoot = strings.TrimSuffix(GitRoot, "\n")
+}
+
+// GetTestConfigPath returns a local testing config for k8s
+func GetTestConfigPath(t *testing.T) string {
+	configpath := path.Join(GitRoot, "integration/secrets/k3s-c2.yaml")
+	return configpath
 }

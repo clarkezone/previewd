@@ -9,42 +9,22 @@ package jobmanager
 import (
 	"log"
 	"os"
-	"os/exec"
 	"path"
-	"strings"
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/rest"
 
+	"github.com/clarkezone/previewd/internal"
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
 )
 
-var gitRoot string
-
-func setup() {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		panic("couldn't read output from git command get gitroot")
-	}
-	gitRoot = string(output)
-	gitRoot = strings.TrimSuffix(gitRoot, "\n")
-}
-
-func SkipCI(t *testing.T) {
-	if os.Getenv("TEST_JEKPREV_TESTLOCALK8S") == "" {
-		t.Skip("Skipping K8slocaltest")
-	}
-}
-
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
 	clarkezoneLog.Init(logrus.DebugLevel)
-	setup()
+	internal.SetupGitRoot()
 	code := m.Run()
 	os.Exit(code)
 }

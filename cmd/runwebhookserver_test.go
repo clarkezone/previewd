@@ -7,9 +7,7 @@
 package cmd
 
 import (
-	"os/exec"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/clarkezone/previewd/internal"
@@ -17,21 +15,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var gitRoot string
-
-func setup() {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		panic("couldn't read output from git command get gitroot")
-	}
-	gitRoot = string(output)
-	gitRoot = strings.TrimSuffix(gitRoot, "\n")
-}
-
-func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
+// GetTestConfig returns a local testing config for k8s
+func GetTestConfig(t *testing.T) *rest.Config {
+	p := internal.GetTestConfigPath(t)
+	configpath := path.Join(p, "integration/secrets/k3s-c2.yaml")
 	c, err := jobmanager.GetConfigOutofCluster(configpath)
 	if err != nil {
 		t.Fatalf("Couldn't get config %v", err)
@@ -41,7 +28,7 @@ func getTestConfig(t *testing.T) *rest.Config {
 
 func TestFindVolumeSuccess(t *testing.T) {
 	repo, localdir, _, _, _ := internal.Getenv(t)
-	c := getTestConfig(t)
+	c := GetTestConfig(t)
 	err := PerformActions(c, repo, localdir, "main", false, "testns", false, false, true, true)
 	if err != nil {
 		t.Fatalf("Performactions failed %v", err)
