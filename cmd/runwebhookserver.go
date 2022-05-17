@@ -7,34 +7,43 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
+	"github.com/clarkezone/previewd/internal"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 // runwebhookserverCmd represents the runwebhookserver command
 var runwebhookserverCmd = &cobra.Command{
-	Use:   "runwebhookserver http://repotoclone.git",
+	Use:   "runwebhookserver --targetrepo <target repo URL> --localdir <path to local dir>",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
-previewd runwebhookserver http://repo.git --localdir /tmp/foo
+previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 `,
-	Args: cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		clarkezoneLog.Infof("PreRunE with args: %v", args)
+		err := internal.ValidateEnv()
+		if err != nil {
+			return err
+		}
 		return nil
-
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-
+	RunE: func(cmd *cobra.Command, args []string) error {
+		clarkezoneLog.Successf("RunE with port: %v TargetRepo:%v localdir:%v",
+			internal.Port, internal.TargetRepo, internal.LocalDir)
 		clarkezoneLog.Infof("runwebhookserver called")
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(runwebhookserverCmd)
 
-	runwebhookserverCmd.Flags().StringP("localdir", "d", "", "absolute path to local dir to clone into")
+	runwebhookserverCmd.PersistentFlags().StringVarP(&internal.TargetRepo, internal.TargetRepoVar, "t",
+		viper.GetString(internal.TargetRepoVar), "url to target repo to clone")
+
+	runwebhookserverCmd.PersistentFlags().StringVarP(&internal.LocalDir, internal.LocalDirVar, "d",
+		viper.GetString(internal.LocalDirVar), "absolute path to local dir to clone into")
 
 	// Here you will define your flags and configuration settings.
 
