@@ -92,7 +92,7 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 // TODO test autodelete
 
 func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(gitRoot, "integration/secrets/k3s-c2.yaml")
+	configpath := path.Join(internal.GitRoot, "integration/secrets/k3s-c2.yaml")
 	c, err := GetConfigOutofCluster(configpath)
 	if err != nil {
 		t.Fatalf("Couldn't get config %v", err)

@@ -60,6 +60,9 @@ func SetupGitRoot() {
 
 // GetTestConfigPath returns a local testing config for k8s
 func GetTestConfigPath(t *testing.T) string {
+	if GitRoot == "" {
+		t.Fatalf("GitRoot is empty, did you call SetupGitRoot() in test?")
+	}
 	configpath := path.Join(GitRoot, "integration/secrets/k3s-c2.yaml")
 	return configpath
 }

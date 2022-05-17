@@ -7,7 +7,6 @@
 package cmd
 
 import (
-	"path"
 	"testing"
 
 	"github.com/clarkezone/previewd/internal"
@@ -18,8 +17,7 @@ import (
 // GetTestConfig returns a local testing config for k8s
 func GetTestConfig(t *testing.T) *rest.Config {
 	p := internal.GetTestConfigPath(t)
-	configpath := path.Join(p, "integration/secrets/k3s-c2.yaml")
-	c, err := jobmanager.GetConfigOutofCluster(configpath)
+	c, err := jobmanager.GetConfigOutofCluster(p)
 	if err != nil {
 		t.Fatalf("Couldn't get config %v", err)
 	}
@@ -27,6 +25,7 @@ func GetTestConfig(t *testing.T) *rest.Config {
 }
 
 func TestFindVolumeSuccess(t *testing.T) {
+	// TODO: create test namespace
 	repo, localdir, _, _, _ := internal.Getenv(t)
 	c := GetTestConfig(t)
 	err := PerformActions(c, repo, localdir, "main", false, "testns", false, false, true, true)

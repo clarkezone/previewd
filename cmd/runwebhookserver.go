@@ -96,7 +96,9 @@ func PerformActions(c *rest.Config, repo string, localRootDir string, initialBra
 
 	if initialbuild {
 		err = initialBuild(namespace)
-		clarkezoneLog.Debugf("initialbuild failed: %v", err)
+		if err != nil {
+			clarkezoneLog.Debugf("initialbuild failed: %v", err)
+		}
 		return err
 	}
 	return nil
@@ -131,7 +133,7 @@ func initialBuild(namespace string) error {
 	}
 	if render == "" {
 		clarkezoneLog.Errorf("render name empty")
-		return err
+		return fmt.Errorf("render name empty")
 	}
 	source, err := jm.FindpvClaimByName(sourcename, namespace)
 	if err != nil {
@@ -140,7 +142,7 @@ func initialBuild(namespace string) error {
 	}
 	if source == "" {
 		clarkezoneLog.Errorf("source name empty")
-		return err
+		return fmt.Errorf("source name empty")
 	}
 	renderref := jm.CreatePvCMountReference(render, "/site", false)
 	srcref := jm.CreatePvCMountReference(source, "/src", true)
