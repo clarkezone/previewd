@@ -195,8 +195,6 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	srcref := jm.CreatePvCMountReference(source, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 
-	// find source vol by name
-	// create volumemount with name and path
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, refs)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")

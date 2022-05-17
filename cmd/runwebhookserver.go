@@ -13,10 +13,12 @@ import (
 	"runtime"
 
 	"github.com/clarkezone/previewd/pkg/jobmanager"
+	"github.com/clarkezone/previewd/pkg/kubelayer"
 	llrm "github.com/clarkezone/previewd/pkg/localrepomanager"
 	"github.com/clarkezone/previewd/pkg/webhooklistener"
 	"github.com/spf13/cobra"
 	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/client-go/rest"
 
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -55,7 +57,7 @@ to quickly create a Cobra application.`,
 }
 
 // PerformActions runs the webhook logic
-func PerformActions(repo string, localRootDir string, initialBranch string,
+func PerformActions(c *rest.Config, repo string, localRootDir string, initialBranch string,
 	preformInCluster bool, namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
 	sourceDir := path.Join(localRootDir, "sourceroot")
 	fileinfo, res := os.Stat(sourceDir)
@@ -68,7 +70,7 @@ func PerformActions(repo string, localRootDir string, initialBranch string,
 
 	var err error
 	if webhooklisten || initialbuild {
-		jm, err = jobmanager.Newjobmanager(preformInCluster, namespace)
+		jm, err = jobmanager.Newjobmanager(c, namespace)
 		if err != nil {
 			return err
 		}
@@ -93,7 +95,9 @@ func PerformActions(repo string, localRootDir string, initialBranch string,
 	}
 
 	if initialbuild {
-		initialBuild(namespace)
+		err = initialBuild(namespace)
+		clarkezoneLog.Debugf("initialbuild failed: %v", err)
+		return err
 	}
 	return nil
 }
@@ -110,7 +114,7 @@ func initialClone(repo string, initialBranch string) error {
 	return nil
 }
 
-func initialBuild(namespace string) {
+func initialBuild(namespace string) error {
 	notifier := (func(job *batchv1.Job, typee jobmanager.ResourseStateType) {
 		log.Printf("Got job in outside world %v", typee)
 
@@ -118,6 +122,29 @@ func initialBuild(namespace string) {
 			log.Printf("Failed job detected")
 		}
 	})
+	const rendername = "render"
+	const sourcename = "source"
+	render, err := jm.FindpvClaimByName(rendername, namespace)
+	if err != nil {
+		clarkezoneLog.Errorf("can't find pvcalim render %v", err)
+		return err
+	}
+	if render == "" {
+		clarkezoneLog.Errorf("render name empty")
+		return err
+	}
+	source, err := jm.FindpvClaimByName(sourcename, namespace)
+	if err != nil {
+		clarkezoneLog.Errorf("can't find pvcalim source %v", err)
+		return err
+	}
+	if source == "" {
+		clarkezoneLog.Errorf("source name empty")
+		return err
+	}
+	renderref := jm.CreatePvCMountReference(render, "/site", false)
+	srcref := jm.CreatePvCMountReference(source, "/src", true)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 	var imagePath string
 	fmt.Printf("%v", runtime.GOARCH)
 	if runtime.GOARCH == "amd64" {
@@ -127,10 +154,12 @@ func initialBuild(namespace string) {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	_, err := jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier)
+	_, err = jm.CreateJob("jekyll-render-container", namespace, imagePath, command,
+		params, notifier, false, refs)
 	if err != nil {
 		log.Printf("Failed to create job: %v\n", err.Error())
 	}
+	return nil
 }
 
 //nolint
