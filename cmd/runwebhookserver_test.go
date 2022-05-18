@@ -14,6 +14,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const (
+	testNamespace = "testns"
+)
+
 // GetTestConfig returns a local testing config for k8s
 func GetTestConfig(t *testing.T) *rest.Config {
 	p := internal.GetTestConfigPath(t)
@@ -24,11 +28,20 @@ func GetTestConfig(t *testing.T) *rest.Config {
 	return c
 }
 
-func TestFindVolumeSuccess(t *testing.T) {
+func TestPerformActions(t *testing.T) {
 	// TODO: create test namespace
+	jm, err := jobmanager.Newjobmanager(GetTestConfig(t), testNamespace)
+	if err != nil {
+		t.Errorf("job manager create failed")
+	}
+
+	err = jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace %v", err)
+	}
 	repo, localdir, _, _, _ := internal.Getenv(t)
 	c := GetTestConfig(t)
-	err := PerformActions(c, repo, localdir, "main", false, "testns", false, false, true, true)
+	err = PerformActions(c, repo, localdir, "main", false, "testns", false, false, true, true)
 	if err != nil {
 		t.Fatalf("Performactions failed %v", err)
 	}

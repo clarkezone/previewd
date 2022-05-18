@@ -21,6 +21,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	testNamespace = "testns"
+)
+
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
 	clarkezoneLog.Init(logrus.DebugLevel)
