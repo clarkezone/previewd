@@ -34,11 +34,24 @@ func TestPerformActions(t *testing.T) {
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
+	const rendername = "render"
+	const sourcename = "source"
 
 	err = jm.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
+
+	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create persistent volume claim %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim(rendername, testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create persistent volume claim %v", err)
+	}
+
 	repo, localdir, _, _, _ := internal.Getenv(t)
 	c := GetTestConfig(t)
 	err = PerformActions(c, repo, localdir, "main", false, "testns", false, false, true, true)
