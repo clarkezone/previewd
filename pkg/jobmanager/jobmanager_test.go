@@ -43,7 +43,7 @@ func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, del
 	// SkipCI(t)
 	defer jm.Close()
 
-	_, err := jm.CreateJob("alpinetest", "testns", "alpine", command, nil, notifier, false, mountlist)
+	_, err := jm.CreateJob("alpinetest", testNamespace, "alpine", command, nil, notifier, false, mountlist)
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
@@ -89,8 +89,6 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 	return completechannel, deletechannel, notifier
 }
 
-// TODO test autodelete
-
 func getTestConfig(t *testing.T) *rest.Config {
 	configpath := path.Join(internal.GitRoot, "integration/secrets/k3s-c2.yaml")
 	c, err := GetConfigOutofCluster(configpath)
@@ -104,7 +102,7 @@ func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
-	jm, ns := GetJobManager(t, "testns")
+	jm, ns := GetJobManager(t, testNamespace)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
@@ -116,7 +114,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	jm, ns := GetJobManager(t, "testns")
+	jm, ns := GetJobManager(t, testNamespace)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
@@ -153,10 +151,24 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	t.Logf("TestCreateJobwithVolumes")
 	const rendername = "render"
 	const sourcename = "source"
-	const namespace = "jekyllpreviewv2"
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	jm, ns := GetJobManager(t, namespace)
+	jm, ns := GetJobManager(t, testNamespace)
+
+	err := jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create persistent volume claim %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim(rendername, testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create persistent volume claim %v", err)
+	}
 	render, err := jm.FindpvClaimByName(rendername, ns)
 	if err != nil {
 		t.Fatalf("can't find pvcalim render %v", err)
@@ -181,6 +193,36 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	}
 }
 
+func TestCreateDeleteNs(t *testing.T) {
+	jm, _ := GetJobManager(t, testNamespace)
+	err := jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace %v", err)
+	}
+	err = jm.DeleteNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete namespace %v", err)
+	}
+}
+
+func TestCreatePersistentVolumeClaim(t *testing.T) {
+	jm, _ := GetJobManager(t, testNamespace)
+	err := jm.CreateNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to create namespace %v", err)
+	}
+
+	err = jm.CreatePersistentVolumeClaim("source", testNamespace)
+	if err != nil {
+		t.Fatalf("unable to creates persistent volume claim %v", err)
+	}
+
+	err = jm.DeleteNamespace(testNamespace)
+	if err != nil {
+		t.Fatalf("unable to delete namespace %v", err)
+	}
+}
+
 func TestGetConfig(t *testing.T) {
 	// SkipCI(t)
 	t.Logf("TestGetConfig")
@@ -198,7 +240,7 @@ func TestCreateJobExitsError(t *testing.T) {
 
 }
 
-// test for other objects created doesn't fire job completion
+// test for other objects created doesn't fire job completion due to already bound
 // test for simple job create and exit
 
 // test for job error state
