@@ -32,6 +32,17 @@ const (
 
 type jobnotifier func(*batchv1.Job, ResourseStateType)
 
+type jobdescriptor struct {
+	name       string
+	namespace  string
+	image      string
+	command    []string
+	args       []string
+	notifier   jobnotifier
+	autoDelete bool
+	mountlist  []kubelayer.PVClaimMountRef
+}
+
 // Jobmanager enables scheduling and querying of jobs
 type Jobmanager struct {
 	currentConfig    *rest.Config
@@ -39,6 +50,7 @@ type Jobmanager struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	jobnotifiers     map[string]jobnotifier
+	addQueue         chan jobdescriptor
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
@@ -59,6 +71,7 @@ func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
 	// TODO only if we want watchers
 	clarkezoneLog.Debugf("Starting watchers")
 	created := jm.startWatchers(namespace)
+	jm.startMonitor()
 	if created {
 		clarkezoneLog.Debugf("watchers sarted correctly")
 		return jm, nil
@@ -95,6 +108,30 @@ func newjobmanagerinternal(config *rest.Config) *Jobmanager {
 
 	jm.currentConfig = config
 	return &jm
+}
+
+func (jm *Jobmanager) startMonitor() {
+	go func() {
+		// define queue for structs
+		// create channel to pass to notifiers
+		for i := 0; i < 2000; i++ {
+			select {
+			case _ = <-jm.addQueue:
+				// push onto queue
+				// case msg2 := <-c2:
+				// k8s job completed is jobcommpleted function
+				// delete completed job
+			}
+			// if queue contains jobs, schedule new job
+			jd := jobdescriptor{}
+			notifier := func(job *batchv1.Job, typee ResourseStateType) {
+				clarkezoneLog.Debugf("Got job in outside world %v", typee)
+				// signal to channel
+			}
+			_, _ = jm.CreateJob(jd.name, jd.namespace, jd.image, jd.command,
+				jd.args, notifier, false, jd.mountlist)
+		}
+	}()
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
@@ -208,31 +245,20 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 	return job, nil
 }
 
+// AddJobtoQueue adds a job to the processing queue
+func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
+	image string, command []string, args []string,
+	mountlist []kubelayer.PVClaimMountRef) error {
+	// TODO do we need to deep copy command array?
+	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
+		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
+	return nil
+}
+
 // DeleteJob deletes a job
 func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
 	clarkezoneLog.Debugf("DeleteJob() called with name:%v namespace:%v", name, namespace)
 	return kubelayer.DeleteJob(jm.currentClientset, name, namespace)
-}
-
-// CreatePersistentVolumeClaim creates a new persistentvolumeclaim
-func (jm *Jobmanager) CreatePersistentVolumeClaim(name string, namespace string) error {
-	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
-	_, err := kubelayer.CreatePersistentVolumeClaim(jm.currentClientset, name, namespace)
-	return err
-}
-
-// CreateNamespace creates a new namespace
-func (jm *Jobmanager) CreateNamespace(namespace string) error {
-	clarkezoneLog.Debugf("CreateNamespace() called with namespace:%v", namespace)
-	_, err := kubelayer.CreateNamespace(jm.currentClientset, namespace)
-	return err
-}
-
-// DeleteNamespace deletes a namespace
-func (jm *Jobmanager) DeleteNamespace(namespace string) error {
-	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
-	err := kubelayer.DeleteNamespace(jm.currentClientset, namespace)
-	return err
 }
 
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster

@@ -63,6 +63,15 @@ func GetJobManager(t *testing.T, ns string) (*Jobmanager, string) {
 	return jm, ns
 }
 
+func GetKubeSession(t *testing.T) *kubelayer.KubeSession {
+	c := getTestConfig(t)
+	ks, err := kubelayer.Newkubesession(c)
+	if err != nil {
+		t.Fatalf("failed to get kubesession %v", err)
+	}
+	return ks
+}
+
 func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
 	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType), mountlist []kubelayer.PVClaimMountRef) batchv1.Job {
 	// SkipCI(t)
@@ -179,18 +188,19 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
 	jm, ns := GetJobManager(t, testNamespace)
+	ks := GetKubeSession(t)
 
-	err := jm.CreateNamespace(testNamespace)
+	err := ks.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
+	err = ks.CreatePersistentVolumeClaim(sourcename, testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim(rendername, testNamespace)
+	err = ks.CreatePersistentVolumeClaim(rendername, testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
@@ -221,30 +231,30 @@ func TestCreateJobwithVolumes(t *testing.T) {
 }
 
 func TestCreateDeleteNs(t *testing.T) {
-	jm, _ := GetJobManager(t, testNamespace)
-	err := jm.CreateNamespace(testNamespace)
+	ks := GetKubeSession(t)
+	err := ks.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
-	err = jm.DeleteNamespace(testNamespace)
+	err = ks.DeleteNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to delete namespace %v", err)
 	}
 }
 
 func TestCreatePersistentVolumeClaim(t *testing.T) {
-	jm, _ := GetJobManager(t, testNamespace)
-	err := jm.CreateNamespace(testNamespace)
+	ks := GetKubeSession(t)
+	err := ks.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim("source", testNamespace)
+	err = ks.CreatePersistentVolumeClaim("source", testNamespace)
 	if err != nil {
 		t.Fatalf("unable to creates persistent volume claim %v", err)
 	}
 
-	err = jm.DeleteNamespace(testNamespace)
+	err = ks.DeleteNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to delete namespace %v", err)
 	}
