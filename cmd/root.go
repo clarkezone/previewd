@@ -40,7 +40,7 @@ to quickly create a Cobra application.`,
 		clarkezoneLog.SetLevel(internal.LogLevel)
 		clarkezoneLog.SetOutputFormat(outputMode)
 		clarkezoneLog.Infof("started %s", strings.Join(os.Args, " "))
-		return internal.ValidateEnv()
+		return nil
 	},
 	PersistentPostRun: func(ccmd *cobra.Command, args []string) {
 		clarkezoneLog.Infof("finished %s", strings.Join(os.Args, " "))
