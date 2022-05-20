@@ -20,6 +20,7 @@ import (
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/mock"
 )
 
 var gitRoot string
@@ -258,6 +259,29 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to delete namespace %v", err)
 	}
+}
+
+type MockJobManager struct {
+	mock.Mock
+}
+
+func (o *MockJobManager) CreateJob(name string, namespace string,
+	image string, command []string, args []string, notifier jobnotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	return nil, nil
+}
+
+func newMockJobManager() *MockJobManager {
+	mjm := MockJobManager{}
+	mjm.On("CreateJjob", "", []string{}, jobnotifier(nil), false,
+		[]kubelayer.PVClaimMountRef{})
+	return &mjm
+}
+
+func TestStartMonitor(t *testing.T) {
+	jm, _ := GetJobManager(t, testNamespace)
+	mjm := newMockJobManager()
+	jm.startMonitor(mjm)
 }
 
 func TestGetConfig(t *testing.T) {
