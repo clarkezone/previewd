@@ -43,6 +43,12 @@ type jobdescriptor struct {
 	mountlist  []kubelayer.PVClaimMountRef
 }
 
+type jobxxx interface {
+	CreateJob(name string, namespace string,
+		image string, command []string, args []string, notifier jobnotifier,
+		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
+}
+
 // Jobmanager enables scheduling and querying of jobs
 type Jobmanager struct {
 	currentConfig    *rest.Config
@@ -71,7 +77,7 @@ func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
 	// TODO only if we want watchers
 	clarkezoneLog.Debugf("Starting watchers")
 	created := jm.startWatchers(namespace)
-	jm.startMonitor()
+	jm.startMonitor(nil)
 	if created {
 		clarkezoneLog.Debugf("watchers sarted correctly")
 		return jm, nil
@@ -110,7 +116,7 @@ func newjobmanagerinternal(config *rest.Config) *Jobmanager {
 	return &jm
 }
 
-func (jm *Jobmanager) startMonitor() {
+func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 	go func() {
 		// define queue for structs
 		// create channel to pass to notifiers
@@ -128,7 +134,7 @@ func (jm *Jobmanager) startMonitor() {
 				clarkezoneLog.Debugf("Got job in outside world %v", typee)
 				// signal to channel
 			}
-			_, _ = jm.CreateJob(jd.name, jd.namespace, jd.image, jd.command,
+			_, _ = jobcontroller.CreateJob(jd.name, jd.namespace, jd.image, jd.command,
 				jd.args, notifier, false, jd.mountlist)
 		}
 	}()
