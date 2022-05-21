@@ -43,6 +43,11 @@ type jobdescriptor struct {
 	mountlist  []kubelayer.PVClaimMountRef
 }
 
+type jobupdate struct {
+	job   *batchv1.Job
+	typee ResourseStateType
+}
+
 type jobxxx interface {
 	CreateJob(name string, namespace string,
 		image string, command []string, args []string, notifier jobnotifier,
@@ -119,23 +124,39 @@ func newjobmanagerinternal(config *rest.Config) *Jobmanager {
 func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 	go func() {
 		// define queue for structs
+		jobqueue := make([]jobdescriptor, 0)
 		// create channel to pass to notifiers
+		jobnotifierchannel := make(chan *jobupdate)
 		for i := 0; i < 2000; i++ {
 			select {
-			case _ = <-jm.addQueue:
+			case nextJob := <-jm.addQueue:
 				// push onto queue
-				// case msg2 := <-c2:
+				jobqueue = append(jobqueue, nextJob)
+			case update := <-jobnotifierchannel:
 				// k8s job completed is jobcommpleted function
-				// delete completed job
+				readyNext := isCompleted(update)
+				if readyNext {
+					err := jm.DeleteJob(update.job.Name, update.job.Namespace)
+					if err != nil {
+						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
+					}
+				}
 			}
 			// if queue contains jobs, schedule new job
-			jd := jobdescriptor{}
-			notifier := func(job *batchv1.Job, typee ResourseStateType) {
-				clarkezoneLog.Debugf("Got job in outside world %v", typee)
-				// signal to channel
+			if len(jobqueue) > 1 {
+				nextjob := jobqueue[0]
+				jobqueue = jobqueue[1:]
+				notifier := func(job *batchv1.Job, typee ResourseStateType) {
+					clarkezoneLog.Debugf("Got job in outside world %v", typee)
+					// signal to notifierchannel
+					jobnotifierchannel <- &jobupdate{job, typee}
+				}
+				_, err := jobcontroller.CreateJob(nextjob.name, nextjob.namespace, nextjob.image, nextjob.command,
+					nextjob.args, notifier, false, nextjob.mountlist)
+				if err != nil {
+					clarkezoneLog.Debugf("Error creating job %v", err)
+				}
 			}
-			_, _ = jobcontroller.CreateJob(jd.name, jd.namespace, jd.image, jd.command,
-				jd.args, notifier, false, jd.mountlist)
 		}
 	}()
 }
@@ -215,6 +236,21 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 			}
 		},
 	}
+}
+
+func isCompleted(ju *jobupdate) bool {
+	clarkezoneLog.Debugf("isCompleted() type:%v name:%v namespace:%v", ju.typee, ju.job.Name, ju.job.Namespace)
+
+	if ju.typee == Update && ju.job.Status.Failed > 0 {
+		clarkezoneLog.Debugf("Job failed")
+		return true
+	}
+
+	if ju.typee == Update && ju.job.Status.Succeeded > 0 {
+		clarkezoneLog.Debugf("Job succeeded")
+		return true
+	}
+	return false
 }
 
 // FindpvClaimByName searches for a persistentvolumeclaim by name

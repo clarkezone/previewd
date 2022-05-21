@@ -261,6 +261,8 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 	}
 }
 
+//TODO: move this into a file run us UT not IT
+
 type MockJobManager struct {
 	mock.Mock
 }
@@ -279,9 +281,32 @@ func newMockJobManager() *MockJobManager {
 }
 
 func TestStartMonitor(t *testing.T) {
+	getJobManagerMockedMonitor(t)
+
+	// TODO: stop monitor
+}
+
+func getJobManagerMockedMonitor(t *testing.T) *Jobmanager {
 	jm, _ := GetJobManager(t, testNamespace)
 	mjm := newMockJobManager()
 	jm.startMonitor(mjm)
+	return jm
+}
+
+func TestSingleJobAdded(t *testing.T) {
+	jm := getJobManagerMockedMonitor(t)
+	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		t.Fatalf("Unable to create job %v", err)
+	}
+
+	// TODO verify createjob called on mock
+	// mock dispatches messages to job causing exit
+	// TODO verify queue is back in steady state
+}
+
+func TestMultiJobAdded(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {
