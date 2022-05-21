@@ -9,47 +9,26 @@ package jobmanager
 import (
 	"log"
 	"os"
-	"os/exec"
 	"path"
-	"strings"
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/rest"
 
+	"github.com/clarkezone/previewd/internal"
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
 )
 
-var gitRoot string
-
 const (
-	configPath    = "integration/secrets/k3s-c2.yaml"
 	testNamespace = "testns"
 )
-
-func setup() {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		panic("couldn't read output from git command get gitroot")
-	}
-	gitRoot = string(output)
-	gitRoot = strings.TrimSuffix(gitRoot, "\n")
-}
-
-func SkipCI(t *testing.T) {
-	if os.Getenv("TEST_JEKPREV_TESTLOCALK8S") == "" {
-		t.Skip("Skipping K8slocaltest")
-	}
-}
 
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
 	clarkezoneLog.Init(logrus.DebugLevel)
-	setup()
+	internal.SetupGitRoot()
 	code := m.Run()
 	os.Exit(code)
 }
@@ -115,7 +94,7 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 }
 
 func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(gitRoot, configPath)
+	configpath := path.Join(internal.GitRoot, "integration/secrets/k3s-c2.yaml")
 	c, err := GetConfigOutofCluster(configpath)
 	if err != nil {
 		t.Fatalf("Couldn't get config %v", err)
@@ -212,8 +191,6 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	srcref := jm.CreatePvCMountReference(source, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 
-	// find source vol by name
-	// create volumemount with name and path
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, refs)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")

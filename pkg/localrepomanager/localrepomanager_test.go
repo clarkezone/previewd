@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/clarkezone/previewd/internal"
 )
 
 func SkipCI(t *testing.T) {
@@ -107,7 +109,7 @@ func TestGetCurrentBranchRender(t *testing.T) {
 
 func TestLRMCheckout(t *testing.T) {
 	//nolint
-	repo, dirname, _, _, _ := Getenv(t)
+	repo, dirname, _, _, _ := internal.Getenv(t)
 
 	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
 	if err != nil {
@@ -126,7 +128,7 @@ func TestLRMCheckout(t *testing.T) {
 }
 
 func TestLRMSwitchBranch(t *testing.T) {
-	repo, dirname, branch, _, _ := Getenv(t)
+	repo, dirname, branch, _, _ := internal.Getenv(t)
 
 	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
 	if err != nil {
@@ -151,7 +153,7 @@ func TestLRMSwitchBranch(t *testing.T) {
 
 func TestLRMSwitchBranchBadBranch(t *testing.T) {
 	//nolint
-	repo, dirname, _, _, _ := Getenv(t)
+	repo, dirname, _, _, _ := internal.Getenv(t)
 
 	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
 	if err != nil {
