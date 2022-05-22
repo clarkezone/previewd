@@ -20,7 +20,6 @@ import (
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/mock"
 )
 
 var gitRoot string
@@ -55,9 +54,9 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func GetJobManager(t *testing.T, ns string) (*Jobmanager, string) {
+func GetJobManager(t *testing.T, ns string, startmonitors bool) (*Jobmanager, string) {
 	c := getTestConfig(t)
-	jm, err := Newjobmanager(c, ns)
+	jm, err := Newjobmanager(c, ns, startmonitors)
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
@@ -137,7 +136,7 @@ func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
-	jm, ns := GetJobManager(t, testNamespace)
+	jm, ns := GetJobManager(t, testNamespace, true)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
@@ -149,7 +148,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	jm, ns := GetJobManager(t, testNamespace)
+	jm, ns := GetJobManager(t, testNamespace, true)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
@@ -159,7 +158,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 func TestFindVolumeSuccess(t *testing.T) {
 	const name = "render"
 	const namespace = "jekyllpreviewv2"
-	jm, ns := GetJobManager(t, namespace)
+	jm, ns := GetJobManager(t, namespace, true)
 	render, err := jm.FindpvClaimByName(name, ns)
 	if err != nil {
 		t.Fatalf("can't find pvcalim render %v", err)
@@ -172,7 +171,7 @@ func TestFindVolumeSuccess(t *testing.T) {
 func TestFindVolumeFail(t *testing.T) {
 	const name = "notexists"
 	const namespace = "jekyllpreviewv2"
-	jm, ns := GetJobManager(t, namespace)
+	jm, ns := GetJobManager(t, namespace, true)
 	render, err := jm.FindpvClaimByName(name, ns)
 	if err != nil {
 		t.Fatalf("error finding pvcalim %v: %v", name, err)
@@ -188,7 +187,7 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	const sourcename = "source"
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	jm, ns := GetJobManager(t, testNamespace)
+	jm, ns := GetJobManager(t, testNamespace, true)
 	ks := GetKubeSession(t)
 
 	err := ks.CreateNamespace(testNamespace)
@@ -259,54 +258,6 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to delete namespace %v", err)
 	}
-}
-
-//TODO: move this into a file run us UT not IT
-
-type MockJobManager struct {
-	mock.Mock
-}
-
-func (o *MockJobManager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier,
-	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
-	return nil, nil
-}
-
-func newMockJobManager() *MockJobManager {
-	mjm := MockJobManager{}
-	mjm.On("CreateJjob", "", []string{}, jobnotifier(nil), false,
-		[]kubelayer.PVClaimMountRef{})
-	return &mjm
-}
-
-func TestStartMonitor(t *testing.T) {
-	getJobManagerMockedMonitor(t)
-
-	// TODO: stop monitor
-}
-
-func getJobManagerMockedMonitor(t *testing.T) *Jobmanager {
-	jm, _ := GetJobManager(t, testNamespace)
-	mjm := newMockJobManager()
-	jm.startMonitor(mjm)
-	return jm
-}
-
-func TestSingleJobAdded(t *testing.T) {
-	jm := getJobManagerMockedMonitor(t)
-	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
-		[]kubelayer.PVClaimMountRef{})
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
-
-	// TODO verify createjob called on mock
-	// mock dispatches messages to job causing exit
-	// TODO verify queue is back in steady state
-}
-
-func TestMultiJobAdded(t *testing.T) {
 }
 
 func TestGetConfig(t *testing.T) {

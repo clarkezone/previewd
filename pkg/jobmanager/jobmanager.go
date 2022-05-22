@@ -62,10 +62,12 @@ type Jobmanager struct {
 	cancel           context.CancelFunc
 	jobnotifiers     map[string]jobnotifier
 	addQueue         chan jobdescriptor
+	monitorExit      chan bool
+	monitorDone      chan bool
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
-func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
+func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*Jobmanager, error) {
 	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config, namespace)
 	if config == nil {
 		return nil, fmt.Errorf("config supplied is nil")
@@ -79,16 +81,19 @@ func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
 	}
 	jm.currentClientset = clientset
 
-	// TODO only if we want watchers
-	clarkezoneLog.Debugf("Starting watchers")
-	created := jm.startWatchers(namespace)
-	jm.startMonitor(nil)
-	if created {
-		clarkezoneLog.Debugf("watchers sarted correctly")
-		return jm, nil
+	if startwatchers {
+		clarkezoneLog.Debugf("Starting watchers")
+		created := jm.startWatchers(namespace)
+		jm.startMonitor(nil)
+		if created {
+			clarkezoneLog.Debugf("watchers sarted correctly")
+			return jm, nil
+		}
+
+		clarkezoneLog.Debugf("watchers failed to start correctly")
+		return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
 	}
-	clarkezoneLog.Debugf("watchers failed to start correctly")
-	return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
+	return jm, nil
 }
 
 // nolint
@@ -118,20 +123,32 @@ func newjobmanagerinternal(config *rest.Config) *Jobmanager {
 	jm.jobnotifiers = make(map[string]jobnotifier)
 
 	jm.currentConfig = config
+	jm.addQueue = make(chan jobdescriptor)
 	return &jm
 }
 
 func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
+	// TODO ensure monitor isn't already running
+	jobqueue := make([]jobdescriptor, 0)
+	jm.monitorExit = make(chan bool)
+	jm.monitorDone = make(chan bool)
 	go func() {
 		// define queue for structs
-		jobqueue := make([]jobdescriptor, 0)
 		// create channel to pass to notifiers
 		jobnotifierchannel := make(chan *jobupdate)
-		for i := 0; i < 2000; i++ {
+		clarkezoneLog.Debugf("Starting job monitor")
+		// TODO: replace with infinite loop
+		defer func() {
+			clarkezoneLog.Debugf("Loop exited")
+			close(jm.monitorExit)
+		}()
+		for {
 			select {
 			case nextJob := <-jm.addQueue:
 				// push onto queue
-				jobqueue = append(jobqueue, nextJob)
+				if nextJob.name != "" {
+					jobqueue = append(jobqueue, nextJob)
+				}
 			case update := <-jobnotifierchannel:
 				// k8s job completed is jobcommpleted function
 				readyNext := isCompleted(update)
@@ -141,9 +158,13 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
 					}
 				}
+			case <-jm.monitorDone:
+				clarkezoneLog.Debugf("monitorDone signalled, exiting loop")
+				return
 			}
 			// if queue contains jobs, schedule new job
 			if len(jobqueue) > 1 {
+				clarkezoneLog.Debugf("jobqueue contains > 1 jobs, scheduling")
 				nextjob := jobqueue[0]
 				jobqueue = jobqueue[1:]
 				notifier := func(job *batchv1.Job, typee ResourseStateType) {
@@ -156,9 +177,15 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				if err != nil {
 					clarkezoneLog.Debugf("Error creating job %v", err)
 				}
+
 			}
-		}
+		} // for
 	}()
+}
+
+func (jm *Jobmanager) stopMonitor() {
+	jm.monitorDone <- true
+	<-jm.monitorExit
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
