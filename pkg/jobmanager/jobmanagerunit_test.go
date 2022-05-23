@@ -1,7 +1,6 @@
 package jobmanager
 
 import (
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -28,6 +27,7 @@ func (o *MockJobManager) CreateJob(name string, namespace string,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
 	// schedule callbacks to mimic kube
 	o.notifier = notifier
+	o.Called(name, namespace, image, command, args, notifier, autoDelete, mountlist)
 	o.launchSuccess()
 	return nil, nil
 }
@@ -49,19 +49,23 @@ func (o *MockJobManager) launchSuccess() {
 	}()
 }
 
-func (o *MockJobManager) WaitDone() {
+func (o *MockJobManager) WaitDone(t *testing.T) {
 	select {
 	case <-o.done:
 	case <-time.After(10 * time.Second):
-		fmt.Println("timeout 10")
+		t.Fatalf("No done before 10 second timeout")
+	}
+}
+
+func (o *MockJobManager) ConfirmSuccess(t *testing.T) {
+	if !o.AssertCalled(t, "CreateJob") {
+		t.Fatalf("CreateJob not called")
 	}
 }
 
 func newMockJobManager() *MockJobManager {
 	mjm := MockJobManager{}
 	mjm.done = make(chan bool)
-	mjm.On("CreateJjob", "", []string{}, mock.AnythingOfType("jobmanager.jobnotifier"), false,
-		[]kubelayer.PVClaimMountRef{})
 	return &mjm
 }
 
@@ -81,14 +85,18 @@ func TestStartMonitor(t *testing.T) {
 
 func TestSingleJobAdded(t *testing.T) {
 	jm, mjm := getJobManagerMockedMonitor(t)
+	mjm.On("CreateJob", "alpinetest", "testns",
+		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
+		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
 		[]kubelayer.PVClaimMountRef{})
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
 	// This will be triggered when delete is called on the mockjobmanager
-	mjm.WaitDone()
-	// TODO verify createjob called on mock
+	mjm.WaitDone(t)
+	mjm.AssertExpectations(t)
 	jm.stopMonitor()
 }
 
