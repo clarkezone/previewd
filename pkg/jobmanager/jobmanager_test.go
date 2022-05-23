@@ -54,6 +54,15 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func getTestConfig(t *testing.T) *rest.Config {
+	configpath := path.Join(gitRoot, configPath)
+	c, err := GetConfigOutofCluster(configpath)
+	if err != nil {
+		t.Fatalf("Couldn't get config %v", err)
+	}
+	return c
+}
+
 func GetJobManager(t *testing.T, ns string, startmonitors bool) (*Jobmanager, string) {
 	c := getTestConfig(t)
 	jm, err := Newjobmanager(c, ns, startmonitors)
@@ -121,15 +130,6 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 		}
 	})
 	return completechannel, deletechannel, notifier
-}
-
-func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(gitRoot, configPath)
-	c, err := GetConfigOutofCluster(configpath)
-	if err != nil {
-		t.Fatalf("Couldn't get config %v", err)
-	}
-	return c
 }
 
 func TestCreateAndSucceed(t *testing.T) {

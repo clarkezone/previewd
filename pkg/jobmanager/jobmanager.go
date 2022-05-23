@@ -114,7 +114,11 @@ func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (
 }
 
 func newjobmanagerinternal(config *rest.Config) *Jobmanager {
-	clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
+	if config != nil {
+		clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
+	} else {
+		clarkezoneLog.Debugf("newjobmanagerinternal called with nil config")
+	}
 	jm := Jobmanager{}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -177,7 +181,6 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				if err != nil {
 					clarkezoneLog.Debugf("Error creating job %v", err)
 				}
-
 			}
 		} // for
 	}()

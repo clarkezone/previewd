@@ -1,11 +1,18 @@
 package jobmanager
 
 import (
+	"os"
 	"testing"
 
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	batchv1 "k8s.io/api/batch/v1"
+)
+
+const (
+	testNamespace = "testns"
 )
 
 type MockJobManager struct {
@@ -25,18 +32,17 @@ func newMockJobManager() *MockJobManager {
 	return &mjm
 }
 
+// nolint
 func getJobManagerMockedMonitor(t *testing.T) *Jobmanager {
-	jm, _ := GetJobManager(t, testNamespace, false)
+	jm := newjobmanagerinternal(nil)
 	mjm := newMockJobManager()
 	jm.startMonitor(mjm)
 	return jm
 }
 
 func TestStartMonitor(t *testing.T) {
-	//ch := make(chan bool)
 	jm := getJobManagerMockedMonitor(t)
 
-	//<-ch
 	jm.stopMonitor()
 }
 
@@ -55,4 +61,11 @@ func TestSingleJobAdded(t *testing.T) {
 }
 
 func TestMultiJobAdded(t *testing.T) {
+}
+
+// TestMain initizlie all tests
+func TestMain(m *testing.M) {
+	clarkezoneLog.Init(logrus.DebugLevel)
+	code := m.Run()
+	os.Exit(code)
 }
