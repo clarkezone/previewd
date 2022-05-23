@@ -94,7 +94,7 @@ func TestSingleJobAdded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
 	}
-	// This will be triggered when delete is called on the mockjobmanager
+	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t)
 	mjm.AssertExpectations(t)
 	jm.stopMonitor()
