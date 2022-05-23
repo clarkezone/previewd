@@ -37,7 +37,7 @@ type KubeSession struct {
 	currentClientset kubernetes.Interface
 }
 
-// NewKubesession creates a new kubesession from a config
+// Newkubesession creates a new kubesession from a config
 func Newkubesession(config *rest.Config) (*KubeSession, error) {
 	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config)
 	if config == nil {

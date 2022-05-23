@@ -1,8 +1,10 @@
 package jobmanager
 
 import (
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
@@ -22,6 +24,7 @@ type MockJobManager struct {
 func (o *MockJobManager) CreateJob(name string, namespace string,
 	image string, command []string, args []string, notifier jobnotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	// schedule callbacks to mimic kube
 	return nil, nil
 }
 
@@ -47,11 +50,17 @@ func TestStartMonitor(t *testing.T) {
 }
 
 func TestSingleJobAdded(t *testing.T) {
+	waitchan := make(chan bool)
 	jm := getJobManagerMockedMonitor(t)
 	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
 		[]kubelayer.PVClaimMountRef{})
 	if err != nil {
 		t.Fatalf("Unable to create job %v", err)
+	}
+	select {
+	case <-waitchan:
+	case <-time.After(10 * time.Second):
+		fmt.Println("timeout 10")
 	}
 
 	// TODO verify createjob called on mock

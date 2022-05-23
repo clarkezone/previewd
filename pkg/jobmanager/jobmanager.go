@@ -167,7 +167,7 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				return
 			}
 			// if queue contains jobs, schedule new job
-			if len(jobqueue) > 1 {
+			if len(jobqueue) > 0 {
 				clarkezoneLog.Debugf("jobqueue contains > 1 jobs, scheduling")
 				nextjob := jobqueue[0]
 				jobqueue = jobqueue[1:]
