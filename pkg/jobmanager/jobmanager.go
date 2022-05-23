@@ -52,6 +52,7 @@ type jobxxx interface {
 	CreateJob(name string, namespace string,
 		image string, command []string, args []string, notifier jobnotifier,
 		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
+	DeleteJob(name string, namespace string) error
 }
 
 // Jobmanager enables scheduling and querying of jobs
@@ -157,10 +158,12 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				// k8s job completed is jobcommpleted function
 				readyNext := isCompleted(update)
 				if readyNext {
-					err := jm.DeleteJob(update.job.Name, update.job.Namespace)
+					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
 					if err != nil {
 						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
 					}
+				} else {
+					clarkezoneLog.Debugf("Received non completed update")
 				}
 			case <-jm.monitorDone:
 				clarkezoneLog.Debugf("monitorDone signalled, exiting loop")
