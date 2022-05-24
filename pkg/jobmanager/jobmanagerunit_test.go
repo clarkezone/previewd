@@ -108,7 +108,11 @@ func (o *MockJobManager) SetJobFail() {
 
 func newMockJobManager() *MockJobManager {
 	mjm := MockJobManager{}
-	mjm.done = make(chan bool)
+
+	// use a buffered channel to avoid deadlocks which can occur
+	// if multiple handlers try and callback into DeleteJob
+	// before the main test thread has reached the waitdone call
+	mjm.done = make(chan bool, 10)
 	return &mjm
 }
 
@@ -159,19 +163,28 @@ func TestMultiJobSuccess(t *testing.T) {
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest2", "testns")
 
-	go func() {
-		err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
-			[]kubelayer.PVClaimMountRef{})
-		if err != nil {
-			panic(err)
-		}
+	// Start job queue adds from a goroutine to avoid deadlocks.
+	// Without doing this, it's possible for the test to deadlock at second AddJobtoQueue
+	// which can get blocked by the Delete implemented in the mock callback sending
+	// to the unit test's done channel, which would block until the waitdone call
+	// is reached below.  But that is never reached because addtoqueue is waiting for
+	// the job processing goroutine.
+	// Solution 1 was to call the deletejob from a goroutine which didn't work.
+	// Solution 2 was to call AddJobtoQueue below from a goroutine.  This worked.
+	// Solution 3 was to use a buffered channel for the done channel in the mock.
+	// go func() {
+	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		t.Fatalf("AddJobtoQueue failed:%v", err)
+	}
 
-		err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
-			[]kubelayer.PVClaimMountRef{})
-		if err != nil {
-			panic(err)
-		}
-	}()
+	err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		t.Fatalf("AddJobtoQueue failed:%v", err)
+	}
+	// }()
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 2)
 	mjm.AssertExpectations(t)
@@ -212,19 +225,17 @@ func TestMultiJobFail(t *testing.T) {
 	})
 
 	mjm.On("FailedJob", "alpinetest", "testns")
-	go func() {
-		err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
-			[]kubelayer.PVClaimMountRef{})
-		if err != nil {
-			panic(err)
-		}
+	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		t.Fatalf("AddJobtoQueue failed:%v", err)
+	}
 
-		err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
-			[]kubelayer.PVClaimMountRef{})
-		if err != nil {
-			panic(err)
-		}
-	}()
+	err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		panic(err)
+	}
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 1)
 	mjm.AssertExpectations(t)

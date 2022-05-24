@@ -162,25 +162,26 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 					clarkezoneLog.Debugf(" startMonitor(): nextJob name is empty hence not adding to jobqueue")
 				}
 			case update := <-jobnotifierchannel:
+				clarkezoneLog.Debugf(" startMonitor(): received job notification from jobnotifierchannel")
 				// k8s job completed is jobcommpleted function
 				readyNext, failed := isCompleted(update)
 				jm.haveFailedJob = failed
 				switch {
 				case readyNext && !failed:
-					clarkezoneLog.Debugf("Successfully completed job detected, deleting job")
+					clarkezoneLog.Debugf(" startMonitor(): successfully completed job detected, deleting job")
 					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
 					if err != nil {
 						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
 					}
 				case readyNext && failed:
-					clarkezoneLog.Debugf("Failed completed job name:%v namespace:%v, cannot process further jobs",
+					clarkezoneLog.Debugf(" startMonitor(): Failed completed job name:%v namespace:%v, cannot process further jobs",
 						update.job.Name, update.job.Namespace)
 					jobcontroller.FailedJob(update.job.Name, update.job.Namespace)
 				default:
-					clarkezoneLog.Debugf("Received non completed update")
+					clarkezoneLog.Debugf(" startMonitor(): Received non completed update")
 				}
 			case <-jm.monitorDone:
-				clarkezoneLog.Debugf("monitorDone signalled, exiting loop")
+				clarkezoneLog.Debugf(" startMonitor(): jm.monitorDone channel signalled, exiting loop")
 				return
 			}
 			// if queue contains jobs and no jobs in progress, schedule new job
