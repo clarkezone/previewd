@@ -162,14 +162,14 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				// k8s job completed is jobcommpleted function
 				readyNext, failed := isCompleted(update)
 				jm.haveFailedJob = failed
-				switch readyNext {
-				case !failed:
+				switch {
+				case readyNext && !failed:
 					clarkezoneLog.Debugf("Successfully completed job detected, deleting job")
 					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
 					if err != nil {
 						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
 					}
-				case failed:
+				case readyNext && failed:
 					clarkezoneLog.Debugf("Failed completed job name:%v namespace:%v, cannot process further jobs",
 						update.job.Name, update.job.Namespace)
 					jobcontroller.FailedJob(update.job.Name, update.job.Namespace)
