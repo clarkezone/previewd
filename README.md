@@ -35,17 +35,24 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] how to debug tests with tags
   - [x] use strongbox to encrypt config
   - [x] fix UT's in k3s
-- [ ] Create missing tests
+- [x] Create missing tests
   - [x] Pass in volumes, not hard coded
   - [x] Rebuild find names functionality via a test
   - [x] test mount volumes
   - [x] test for find volume
-- [ ] integration test that calls webhook job creation code that uses out of cluster mode based on main function
-  - [ ] make `TestCreateJobwithVolumes` fail with current broken behavior (when pod is pending due to already bound)
-  - [ ] Create namespace imperitively
-  - [ ] Create PersistentVolume and PersistentVolumeClaim imperitively
-  - [ ] `TestCreateJobwithVolumes` test passes
-  - [ ] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
+- [x] integration test that calls webhook job creation code that uses out of cluster mode based on main function
+  - [x] Create namespace imperitively
+  - [x] Create PersistentVolume and PersistentVolumeClaim imperitively
+  - [x] `TestCreateJobwithVolumes` test passes
+  - [x] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
+- [ ] MultiJob support
+  - [x] Test for multijob support one passing jobs
+  - [x] Test for multijob support two passing jobs
+  - [x] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes
+  - [ ] Implement provider against actual k8s: TestCreateJobwithVolumes passes with multijob
+  - [ ] Test for multijob support two passing jobs actual k8s
+  - [ ] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes (ensure we can detect pending jobs due to unbound pvcs)
+  - [ ] Refactor JobManager to extract k8s specifics into kubesession; jobmanager uses a kubesession
 
 # End to end secenario for clone, webhook, render via job works from cmdline
 
