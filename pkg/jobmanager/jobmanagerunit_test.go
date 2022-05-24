@@ -42,7 +42,9 @@ func (o *MockJobManager) DeleteJob(name string, namespace string) error {
 	o.Called(name, namespace)
 	// TODO: track jobs i've scheduled and do more accurate refcount
 	o.scheduledByMeinProgress--
-	o.done <- true
+	go func() {
+		o.done <- true
+	}()
 	return nil
 }
 
