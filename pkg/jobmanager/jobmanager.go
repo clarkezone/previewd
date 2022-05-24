@@ -53,6 +53,9 @@ type jobxxx interface {
 		image string, command []string, args []string, notifier jobnotifier,
 		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
 	DeleteJob(name string, namespace string) error
+	FailedJob(name string, namesapce string)
+	// InProgress returns true if jobs we have scheduled are in progress
+	InProgress() bool
 }
 
 // Jobmanager enables scheduling and querying of jobs
@@ -65,6 +68,7 @@ type Jobmanager struct {
 	addQueue         chan jobdescriptor
 	monitorExit      chan bool
 	monitorDone      chan bool
+	haveFailedJob    bool
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
@@ -156,37 +160,55 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				}
 			case update := <-jobnotifierchannel:
 				// k8s job completed is jobcommpleted function
-				readyNext := isCompleted(update)
-				if readyNext {
+				readyNext, failed := isCompleted(update)
+				jm.haveFailedJob = failed
+				switch readyNext {
+				case !failed:
+					clarkezoneLog.Debugf("Successfully completed job detected, deleting job")
 					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
 					if err != nil {
 						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
 					}
-				} else {
+				case failed:
+					clarkezoneLog.Debugf("Failed completed job name:%v namespace:%v, cannot process further jobs",
+						update.job.Name, update.job.Namespace)
+					jobcontroller.FailedJob(update.job.Name, update.job.Namespace)
+				default:
 					clarkezoneLog.Debugf("Received non completed update")
 				}
 			case <-jm.monitorDone:
 				clarkezoneLog.Debugf("monitorDone signalled, exiting loop")
 				return
 			}
-			// if queue contains jobs, schedule new job
-			if len(jobqueue) > 0 {
-				clarkezoneLog.Debugf("jobqueue contains > 1 jobs, scheduling")
-				nextjob := jobqueue[0]
-				jobqueue = jobqueue[1:]
-				notifier := func(job *batchv1.Job, typee ResourseStateType) {
-					clarkezoneLog.Debugf("Got job in outside world %v", typee)
-					// signal to notifierchannel
-					jobnotifierchannel <- &jobupdate{job, typee}
-				}
-				_, err := jobcontroller.CreateJob(nextjob.name, nextjob.namespace, nextjob.image, nextjob.command,
-					nextjob.args, notifier, false, nextjob.mountlist)
-				if err != nil {
-					clarkezoneLog.Debugf("Error creating job %v", err)
-				}
-			}
+			// if queue contains jobs and no jobs in progress, schedule new job
+			// signal to notifierchannel
+			jm.scheduleIfPossible(&jobqueue, jobcontroller, jobnotifierchannel)
 		} // for
 	}()
+}
+
+func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
+	jobcontroller jobxxx, jobnotifierchannel chan *jobupdate) {
+	if len(*jobqueue) > 0 && !jobcontroller.InProgress() {
+		if jm.haveFailedJob {
+			clarkezoneLog.Debugf("jobqueue contains > 1 jobs, but we have a failed job hence not scheduling")
+		} else {
+			clarkezoneLog.Debugf("jobqueue contains > 1 jobs, scheduling")
+			nextjob := (*jobqueue)[0]
+			// TODO: Fix this
+			// jobqueue = *jobqueue[1:]
+			notifier := func(job *batchv1.Job, typee ResourseStateType) {
+				clarkezoneLog.Debugf("Got job in outside world %v", typee)
+
+				jobnotifierchannel <- &jobupdate{job, typee}
+			}
+			_, err := jobcontroller.CreateJob(nextjob.name, nextjob.namespace, nextjob.image, nextjob.command,
+				nextjob.args, notifier, false, nextjob.mountlist)
+			if err != nil {
+				clarkezoneLog.Debugf("Error creating job %v", err)
+			}
+		}
+	}
 }
 
 func (jm *Jobmanager) stopMonitor() {
@@ -271,19 +293,19 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 	}
 }
 
-func isCompleted(ju *jobupdate) bool {
+func isCompleted(ju *jobupdate) (bool, bool) {
 	clarkezoneLog.Debugf("isCompleted() type:%v name:%v namespace:%v", ju.typee, ju.job.Name, ju.job.Namespace)
 
 	if ju.typee == Update && ju.job.Status.Failed > 0 {
 		clarkezoneLog.Debugf("Job failed")
-		return true
+		return true, true
 	}
 
 	if ju.typee == Update && ju.job.Status.Succeeded > 0 {
 		clarkezoneLog.Debugf("Job succeeded")
-		return true
+		return true, false
 	}
-	return false
+	return false, false
 }
 
 // FindpvClaimByName searches for a persistentvolumeclaim by name
@@ -324,6 +346,9 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
 	image string, command []string, args []string,
 	mountlist []kubelayer.PVClaimMountRef) error {
+	clarkezoneLog.Debugf("AddJobtoQueue() called with name %v, namespace:%v,"+
+		"image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
+		name, namespace, image, command, args, mountlist)
 	// TODO do we need to deep copy command array?
 	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
 		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
