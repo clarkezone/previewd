@@ -159,17 +159,19 @@ func TestMultiJobSuccess(t *testing.T) {
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest2", "testns")
 
-	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
-		[]kubelayer.PVClaimMountRef{})
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
+	go func() {
+		err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+			[]kubelayer.PVClaimMountRef{})
+		if err != nil {
+			panic(err)
+		}
 
-	err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
-		[]kubelayer.PVClaimMountRef{})
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
+		err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
+			[]kubelayer.PVClaimMountRef{})
+		if err != nil {
+			panic(err)
+		}
+	}()
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 2)
 	mjm.AssertExpectations(t)
