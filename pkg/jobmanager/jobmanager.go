@@ -146,7 +146,6 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 		// create channel to pass to notifiers
 		jobnotifierchannel := make(chan *jobupdate)
 		clarkezoneLog.Debugf("Starting job monitor")
-		// TODO: replace with infinite loop
 		defer func() {
 			clarkezoneLog.Debugf("Loop exited")
 			close(jm.monitorExit)
