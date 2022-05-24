@@ -91,6 +91,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 }
 
 func (o *MockJobManager) WaitDone(t *testing.T, numjobs int) {
+	clarkezoneLog.Debugf("Begin wait done on mockjobmananger")
 	for i := 0; i < numjobs; i++ {
 		select {
 		case <-o.done:
@@ -98,6 +99,7 @@ func (o *MockJobManager) WaitDone(t *testing.T, numjobs int) {
 			t.Fatalf("No done before 10 second timeout")
 		}
 	}
+	clarkezoneLog.Debugf("End wait done on mockjobmananger")
 }
 
 func (o *MockJobManager) SetJobFail() {

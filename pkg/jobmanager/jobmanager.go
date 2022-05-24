@@ -210,8 +210,14 @@ func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
 }
 
 func (jm *Jobmanager) stopMonitor() {
+	clarkezoneLog.Debugf("stopMonitor begin")
+	clarkezoneLog.Debugf(" stopMonitor begin send true to monitorDone channel")
 	jm.monitorDone <- true
+	clarkezoneLog.Debugf(" stopMonitor end send true to monitorDone channel")
+	clarkezoneLog.Debugf(" stopMonitor begin wait for monitor exit")
 	<-jm.monitorExit
+	clarkezoneLog.Debugf(" stopMonitor end wait for monitor exit")
+	clarkezoneLog.Debugf("stopMonitor end")
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
@@ -345,7 +351,7 @@ func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
 	image string, command []string, args []string,
 	mountlist []kubelayer.PVClaimMountRef) error {
 	clarkezoneLog.Debugf("AddJobtoQueue() called with name %v, namespace:%v,"+
-		"image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
+		"image:%v, command:%v, args:%v, pvlist:%v",
 		name, namespace, image, command, args, mountlist)
 	// TODO do we need to deep copy command array?
 	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
