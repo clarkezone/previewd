@@ -42,9 +42,7 @@ func (o *MockJobManager) DeleteJob(name string, namespace string) error {
 	o.Called(name, namespace)
 	// TODO: track jobs i've scheduled and do more accurate refcount
 	o.scheduledByMeinProgress--
-	go func() {
-		o.done <- true
-	}()
+	o.done <- true
 	return nil
 }
 
@@ -212,17 +210,19 @@ func TestMultiJobFail(t *testing.T) {
 	})
 
 	mjm.On("FailedJob", "alpinetest", "testns")
-	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
-		[]kubelayer.PVClaimMountRef{})
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
+	go func() {
+		err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+			[]kubelayer.PVClaimMountRef{})
+		if err != nil {
+			panic(err)
+		}
 
-	err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
-		[]kubelayer.PVClaimMountRef{})
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
+		err = jm.AddJobtoQueue("alpinetest2", testNamespace, "alpine", nil, nil,
+			[]kubelayer.PVClaimMountRef{})
+		if err != nil {
+			panic(err)
+		}
+	}()
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 1)
 	mjm.AssertExpectations(t)
