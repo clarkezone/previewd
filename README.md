@@ -48,7 +48,7 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [ ] MultiJob support
   - [x] Test for multijob support one passing jobs
   - [x] Test for multijob support two passing jobs
-  - [x] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes 
+  - [x] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes
   - [ ] Implement provider against actual k8s: TestCreateJobwithVolumes passes with multijob
   - [ ] Test for multijob support two passing jobs actual k8s
   - [ ] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes (ensure we can detect pending jobs due to unbound pvcs)
