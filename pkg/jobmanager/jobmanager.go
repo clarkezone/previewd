@@ -195,8 +195,7 @@ func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
 		} else {
 			clarkezoneLog.Debugf("jobqueue contains > 1 jobs, scheduling")
 			nextjob := (*jobqueue)[0]
-			// TODO: Fix this
-			// jobqueue = *jobqueue[1:]
+			*jobqueue = (*jobqueue)[1:]
 			notifier := func(job *batchv1.Job, typee ResourseStateType) {
 				clarkezoneLog.Debugf("Got job in outside world %v", typee)
 
