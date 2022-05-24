@@ -145,17 +145,21 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 		// define queue for structs
 		// create channel to pass to notifiers
 		jobnotifierchannel := make(chan *jobupdate)
-		clarkezoneLog.Debugf("Starting job monitor")
+		clarkezoneLog.Debugf("startmonitor() starting job monitor")
 		defer func() {
-			clarkezoneLog.Debugf("Loop exited")
+			clarkezoneLog.Debugf(" startMonitor: Loop exited")
 			close(jm.monitorExit)
 		}()
 		for {
 			select {
 			case nextJob := <-jm.addQueue:
+				clarkezoneLog.Debugf(" startMonitor(): received job from jm.addQueue channel")
 				// push onto queue
 				if nextJob.name != "" {
+					clarkezoneLog.Debugf(" startMonitor(): nextJob name is not empty hence adding to jobqueue")
 					jobqueue = append(jobqueue, nextJob)
+				} else {
+					clarkezoneLog.Debugf(" startMonitor(): nextJob name is empty hence not adding to jobqueue")
 				}
 			case update := <-jobnotifierchannel:
 				// k8s job completed is jobcommpleted function
@@ -188,24 +192,33 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 
 func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
 	jobcontroller jobxxx, jobnotifierchannel chan *jobupdate) {
-	if len(*jobqueue) > 0 && !jobcontroller.InProgress() {
+	jobQueueLength := len(*jobqueue)
+	jobInProgress := jobcontroller.InProgress()
+	clarkezoneLog.Debugf("scheduleIfPossible called jobqueue length:%v, jobcontroller.InProgress():%v",
+		jobQueueLength, jobInProgress)
+	if jobQueueLength > 0 && !jobInProgress {
+		clarkezoneLog.Debugf(" scheduleIfPossible attempting to schedule")
 		if jm.haveFailedJob {
-			clarkezoneLog.Debugf("jobqueue contains > 1 jobs, but we have a failed job hence not scheduling")
+			clarkezoneLog.Debugf(" scheduleIfPossible jobqueue contains > 1 jobs, but we have a failed job hence not scheduling")
 		} else {
-			clarkezoneLog.Debugf("jobqueue contains > 1 jobs, scheduling")
+			clarkezoneLog.Debugf(" scheduleIfPossible jobqueue contains > 1 jobs, scheduling")
 			nextjob := (*jobqueue)[0]
 			*jobqueue = (*jobqueue)[1:]
 			notifier := func(job *batchv1.Job, typee ResourseStateType) {
-				clarkezoneLog.Debugf("Got job in outside world %v", typee)
+				clarkezoneLog.Debugf(" notifier called: Got job in outside world %v", typee)
 
+				clarkezoneLog.Debugf(" notifier begin send job update to jobnotifierchannel")
 				jobnotifierchannel <- &jobupdate{job, typee}
+				clarkezoneLog.Debugf(" notifier end send job update to jobnotifierchannel")
 			}
 			_, err := jobcontroller.CreateJob(nextjob.name, nextjob.namespace, nextjob.image, nextjob.command,
 				nextjob.args, notifier, false, nextjob.mountlist)
 			if err != nil {
-				clarkezoneLog.Debugf("Error creating job %v", err)
+				clarkezoneLog.Debugf(" scheduleIfPossible Error creating job %v", err)
 			}
 		}
+	} else {
+		clarkezoneLog.Debugf(" scheduleIfPossible: nothing to schedule")
 	}
 }
 
@@ -301,14 +314,16 @@ func isCompleted(ju *jobupdate) (bool, bool) {
 	clarkezoneLog.Debugf("isCompleted() type:%v name:%v namespace:%v", ju.typee, ju.job.Name, ju.job.Namespace)
 
 	if ju.typee == Update && ju.job.Status.Failed > 0 {
-		clarkezoneLog.Debugf("Job failed")
+		clarkezoneLog.Debugf(" isCompleted Job failed")
 		return true, true
 	}
 
 	if ju.typee == Update && ju.job.Status.Succeeded > 0 {
-		clarkezoneLog.Debugf("Job succeeded")
+		clarkezoneLog.Debugf(" isCompleted Job succeeded")
 		return true, false
 	}
+
+	clarkezoneLog.Debugf(" isCompleted Job not complete")
 	return false, false
 }
 
@@ -354,8 +369,10 @@ func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
 		"image:%v, command:%v, args:%v, pvlist:%v",
 		name, namespace, image, command, args, mountlist)
 	// TODO do we need to deep copy command array?
+	clarkezoneLog.Debugf(" addjobtoqueue: begin add job descriptor to jm.addQueue channel")
 	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
 		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
+	clarkezoneLog.Debugf(" addjobtoqueue: end add job descriptor to jm.addQueue channel")
 	return nil
 }
 
