@@ -252,6 +252,18 @@ func CreateNamespace(clientset kubernetes.Interface, name string) (*apiv1.Namesp
 	return created, nil
 }
 
+// GetNamespace executes get namespace action against cluster referenced by clientset
+func GetNamespace(clientset kubernetes.Interface, name string) (*apiv1.Namespace, error) {
+	pvclient := clientset.CoreV1().Namespaces()
+
+	meta := metav1.GetOptions{}
+	found, err := pvclient.Get(context.TODO(), name, meta)
+	if err != nil {
+		return nil, err
+	}
+	return found, nil
+}
+
 // DeleteNamespace executes delete namespace action against cluster referenced by clientset
 func DeleteNamespace(clientset kubernetes.Interface, name string) error {
 	pvclient := clientset.CoreV1().Namespaces()
