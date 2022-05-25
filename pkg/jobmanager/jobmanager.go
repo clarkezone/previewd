@@ -78,7 +78,6 @@ func (o *kubeJobManager) FailedJob(name string, namespace string) {
 
 func (o *kubeJobManager) InProgress() bool {
 	panic("we need to refcount or query")
-	return false
 }
 
 // Implement jobxxx interface end
