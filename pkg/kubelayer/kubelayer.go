@@ -9,7 +9,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -29,51 +28,6 @@ type PVClaimMountRef struct {
 	PVClaimName string
 	MountPath   string
 	ReadOnly    bool
-}
-
-// KubeSession is a session to a k8s cluster
-type KubeSession struct {
-	currentConfig    *rest.Config
-	currentClientset kubernetes.Interface
-}
-
-// Newkubesession creates a new kubesession from a config
-func Newkubesession(config *rest.Config) (*KubeSession, error) {
-	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config)
-	if config == nil {
-		return nil, fmt.Errorf("config supplied is nil")
-	}
-
-	ks := KubeSession{currentConfig: config}
-
-	clientset, err := kubernetes.NewForConfig(ks.currentConfig)
-	if err != nil {
-		clarkezoneLog.Errorf("unable to create new clientset for config:%v", err)
-		return nil, err
-	}
-	ks.currentClientset = clientset
-	return &ks, nil
-}
-
-// CreatePersistentVolumeClaim creates a new persistentvolumeclaim
-func (jm *KubeSession) CreatePersistentVolumeClaim(name string, namespace string) error {
-	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
-	_, err := CreatePersistentVolumeClaim(jm.currentClientset, name, namespace)
-	return err
-}
-
-// CreateNamespace creates a new namespace
-func (jm *KubeSession) CreateNamespace(namespace string) error {
-	clarkezoneLog.Debugf("CreateNamespace() called with namespace:%v", namespace)
-	_, err := CreateNamespace(jm.currentClientset, namespace)
-	return err
-}
-
-// DeleteNamespace deletes a namespace
-func (jm *KubeSession) DeleteNamespace(namespace string) error {
-	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
-	err := DeleteNamespace(jm.currentClientset, namespace)
-	return err
 }
 
 // PingAPI tests if server is working
