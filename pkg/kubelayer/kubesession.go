@@ -215,14 +215,14 @@ func (ks *KubeSession) getNamespaceHandlers() *cache.ResourceEventHandlerFuncs {
 	return &cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ns := obj.(*corev1.Namespace)
-			clarkezoneLog.Debugf("Namespace added: %s/%s", ns.Name)
+			clarkezoneLog.Debugf("Namespace added: %s", ns.Name)
 			if val, ok := ks.namespacenotifiers[ns.Name]; ok {
 				val(ns, Update)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			ns := obj.(*corev1.Namespace)
-			clarkezoneLog.Debugf("Namespace deleted: %s/%s", ns.Name)
+			clarkezoneLog.Debugf("Namespace deleted: %s", ns.Name)
 			if val, ok := ks.namespacenotifiers[ns.Name]; ok {
 				val(ns, Update)
 			}
