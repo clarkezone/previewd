@@ -72,13 +72,40 @@ type Jobmanager struct {
 	jobProvider      jobxxx
 }
 
+type kubeJobManager struct {
+	// TODO: use kubesession for all kube functionality (add it from here)
+	// TODO: move jm kube based tests into kubesession tests
+	// TODO: re-enable integration tests once kube / git dependency gone from job manager
+}
+
+// Implement jobxxx interface begin
+func (o *kubeJobManager) CreateJob(name string, namespace string,
+	image string, command []string, args []string, notifier jobnotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	return nil, nil
+}
+
+func (o *kubeJobManager) DeleteJob(name string, namespace string) error {
+	return nil
+}
+
+func (o *kubeJobManager) FailedJob(name string, namespace string) {
+}
+
+func (o *kubeJobManager) InProgress() bool {
+	return false
+}
+
+// Implement jobxxx interface end
+
 // Newjobmanager is a factory method to create a new instanace of a job manager
 func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*Jobmanager, error) {
 	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config, namespace)
 	if config == nil {
 		return nil, fmt.Errorf("config supplied is nil")
 	}
-	jm := newjobmanagerinternal(config, nil)
+	kubeProvider := kubeJobManager{}
+	jm := newjobmanagerinternal(config, &kubeProvider)
 
 	clientset, err := kubernetes.NewForConfig(jm.currentConfig)
 	if err != nil {

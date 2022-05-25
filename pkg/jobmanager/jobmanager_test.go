@@ -4,6 +4,15 @@
 // to setup vscode for debugging integration tests see:
 // https://www.ryanchapin.com/configuring-vscode-to-use-build-tags-in-golang-to-separate-integration-and-unit-test-code/
 
+// open settings json or remote settings json
+// {
+//"go.buildFlags": [
+//    "-tags=unit,integration"
+//],
+//"go.buildTags": "-tags=unit,integration",
+//"go.testTags": "-tags=unit,integration"
+// }
+
 package jobmanager
 
 import (
