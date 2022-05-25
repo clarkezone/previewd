@@ -69,6 +69,7 @@ type Jobmanager struct {
 	monitorExit      chan bool
 	monitorDone      chan bool
 	haveFailedJob    bool
+	jobProvider      jobxxx
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
@@ -77,7 +78,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*
 	if config == nil {
 		return nil, fmt.Errorf("config supplied is nil")
 	}
-	jm := newjobmanagerinternal(config)
+	jm := newjobmanagerinternal(config, nil)
 
 	clientset, err := kubernetes.NewForConfig(jm.currentConfig)
 	if err != nil {
@@ -89,7 +90,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*
 	if startwatchers {
 		clarkezoneLog.Debugf("Starting watchers")
 		created := jm.startWatchers(namespace)
-		jm.startMonitor(nil)
+		jm.startMonitor(jm.jobProvider)
 		if created {
 			clarkezoneLog.Debugf("watchers sarted correctly")
 			return jm, nil
@@ -105,7 +106,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*
 func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (*Jobmanager, error) {
 	clarkezoneLog.Debugf("newjobmanagerwithclient called with clientset:%v, namespace:%v",
 		clientset, namespace)
-	jm := newjobmanagerinternal(nil)
+	jm := newjobmanagerinternal(nil, nil)
 
 	jm.currentClientset = clientset
 
@@ -118,7 +119,7 @@ func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (
 	return nil, fmt.Errorf("unable to create jobmanaer; startwatchers failed")
 }
 
-func newjobmanagerinternal(config *rest.Config) *Jobmanager {
+func newjobmanagerinternal(config *rest.Config, provider jobxxx) *Jobmanager {
 	if config != nil {
 		clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
 	} else {
@@ -133,6 +134,7 @@ func newjobmanagerinternal(config *rest.Config) *Jobmanager {
 
 	jm.currentConfig = config
 	jm.addQueue = make(chan jobdescriptor)
+	jm.jobProvider = provider
 	return &jm
 }
 

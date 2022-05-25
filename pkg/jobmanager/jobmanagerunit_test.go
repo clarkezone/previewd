@@ -118,8 +118,8 @@ func newMockJobManager() *MockJobManager {
 
 // nolint
 func getJobManagerMockedMonitor(t *testing.T) (*Jobmanager, *MockJobManager) {
-	jm := newjobmanagerinternal(nil)
 	mjm := newMockJobManager()
+	jm := newjobmanagerinternal(nil, mjm)
 	jm.startMonitor(mjm)
 	return jm, mjm
 }
