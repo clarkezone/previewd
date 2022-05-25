@@ -76,6 +76,7 @@ type kubeJobManager struct {
 	// TODO: use kubesession for all kube functionality (add it from here)
 	// TODO: move jm kube based tests into kubesession tests
 	// TODO: re-enable integration tests once kube / git dependency gone from job manager
+	// TODO: re-run jobmanager integration tests individually to ensure they aren't broken by refactor
 }
 
 // Implement jobxxx interface begin
