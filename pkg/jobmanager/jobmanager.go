@@ -59,7 +59,12 @@ type kubeJobManager struct {
 	// TODO: [x] fix jobmanager unit tests
 	// TODO: [x] implement povider on top of kubesession
 	// TODO: [x] incl successful itegration test
-	// TODO: add make integration command for jobmanager integration with longer timeout
+	// TODO: [x] add make integration command for jobmanager integration with longer timeout
+	// TODO: Rebase ready for PR
+
+	// TODO: Ensure kubesession tests delete ns at end
+	// TODO: Create ns for Jobmanager integration test and re-enable in makefile
+	// TODO: delete pods accociated with job
 	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
 }
 
