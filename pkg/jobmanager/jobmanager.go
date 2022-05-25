@@ -74,10 +74,12 @@ type Jobmanager struct {
 
 type kubeJobManager struct {
 	kubeSession *kubelayer.KubeSession
+	// TODO: [x] Copy kuberelated methods to KubeSession
+	// TODO: [x] move jm kube based tests into kubesession tests and enable
+	// TODO: re-run kubesession integration tests individually to ensure they aren't broken by refactor
 	// TODO: use kubesession for all kube functionality (add it from here)
-	// TODO: move jm kube based tests into kubesession tests
-	// TODO: re-enable integration tests once kube / git dependency gone from job manager
-	// TODO: re-run jobmanager integration tests individually to ensure they aren't broken by refactor
+	// TODO: rip out kube functionality from jobmanager
+	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
 }
 
 // Implement jobxxx interface begin
