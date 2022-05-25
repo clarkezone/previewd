@@ -161,7 +161,7 @@ func TestMultiJobSuccess(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest2", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.JobNotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest2", "testns")
 

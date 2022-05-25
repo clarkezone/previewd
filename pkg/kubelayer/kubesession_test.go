@@ -14,7 +14,6 @@ package kubelayer
 
 import (
 	"log"
-	"os"
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -24,20 +23,11 @@ import (
 
 	"github.com/clarkezone/previewd/internal"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
-	"github.com/sirupsen/logrus"
 )
 
 const (
 	testNamespace = "testns"
 )
-
-// TestMain initizlie all tests
-func TestMain(m *testing.M) {
-	clarkezoneLog.Init(logrus.DebugLevel)
-	internal.SetupGitRoot()
-	code := m.Run()
-	os.Exit(code)
-}
 
 func GetKubeSession(t *testing.T) *KubeSession {
 	c := getTestConfig(t)
