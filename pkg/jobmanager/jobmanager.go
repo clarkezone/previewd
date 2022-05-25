@@ -11,39 +11,25 @@ import (
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
-// ResourseStateType is used in the notification callback
-type ResourseStateType int
-
-const (
-	// Create indicates a job was just created
-	Create = 0
-	// Update indicates a job was just updated
-	Update
-	// Delete indicates a job was just deleted
-	Delete
-)
-
-type jobnotifier func(*batchv1.Job, ResourseStateType)
-
 type jobdescriptor struct {
 	name       string
 	namespace  string
 	image      string
 	command    []string
 	args       []string
-	notifier   jobnotifier
+	notifier   kubelayer.JobNotifier
 	autoDelete bool
 	mountlist  []kubelayer.PVClaimMountRef
 }
 
 type jobupdate struct {
 	job   *batchv1.Job
-	typee ResourseStateType
+	typee kubelayer.ResourseStateType
 }
 
 type jobxxx interface {
 	CreateJob(name string, namespace string,
-		image string, command []string, args []string, notifier jobnotifier,
+		image string, command []string, args []string, notifier kubelayer.JobNotifier,
 		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
 	DeleteJob(name string, namespace string) error
 	FailedJob(name string, namesapce string)
@@ -70,24 +56,28 @@ type kubeJobManager struct {
 	// TODO: [x] rip out kube functionality from jobmanager
 	// TODO: [x] fix jobmanager unit tests
 	// TODO: implement povider on top of kubesession
+	// TODO: incl successful itegration test
 	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
 }
 
 // Implement jobxxx interface begin
 func (o *kubeJobManager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier,
+	image string, command []string, args []string, notifier kubelayer.JobNotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
-	return nil, nil
+	return o.kubeSession.CreateJob(name, namespace,
+		image, command, args, notifier, autoDelete, mountlist)
 }
 
 func (o *kubeJobManager) DeleteJob(name string, namespace string) error {
-	return nil
+	return o.kubeSession.DeleteJob(name, namespace)
 }
 
 func (o *kubeJobManager) FailedJob(name string, namespace string) {
+	// only used for unit tests
 }
 
 func (o *kubeJobManager) InProgress() bool {
+	panic("we need to refcount or query")
 	return false
 }
 
@@ -101,6 +91,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*
 	}
 	kubeProvider := kubeJobManager{}
 	jm, err := newjobmanagerinternal(config, &kubeProvider)
+	kubeProvider.kubeSession = jm.kubeSession
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +223,7 @@ func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
 			clarkezoneLog.Debugf(" scheduleIfPossible jobqueue contains > 1 jobs, scheduling")
 			nextjob := (*jobqueue)[0]
 			*jobqueue = (*jobqueue)[1:]
-			notifier := func(job *batchv1.Job, typee ResourseStateType) {
+			notifier := func(job *batchv1.Job, typee kubelayer.ResourseStateType) {
 				clarkezoneLog.Debugf(" notifier called: Got job in outside world %v", typee)
 
 				clarkezoneLog.Debugf(" notifier begin send job update to jobnotifierchannel")
@@ -264,12 +255,12 @@ func (jm *Jobmanager) stopMonitor() {
 func isCompleted(ju *jobupdate) (bool, bool) {
 	clarkezoneLog.Debugf("isCompleted() type:%v name:%v namespace:%v", ju.typee, ju.job.Name, ju.job.Namespace)
 
-	if ju.typee == Update && ju.job.Status.Failed > 0 {
+	if ju.typee == kubelayer.Update && ju.job.Status.Failed > 0 {
 		clarkezoneLog.Debugf(" isCompleted Job failed")
 		return true, true
 	}
 
-	if ju.typee == Update && ju.job.Status.Succeeded > 0 {
+	if ju.typee == kubelayer.Update && ju.job.Status.Succeeded > 0 {
 		clarkezoneLog.Debugf(" isCompleted Job succeeded")
 		return true, false
 	}
