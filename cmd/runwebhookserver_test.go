@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/clarkezone/previewd/internal"
-	"github.com/clarkezone/previewd/pkg/jobmanager"
+	"github.com/clarkezone/previewd/pkg/kubelayer"
 	"k8s.io/client-go/rest"
 )
 
@@ -21,7 +21,7 @@ const (
 // GetTestConfig returns a local testing config for k8s
 func GetTestConfig(t *testing.T) *rest.Config {
 	p := internal.GetTestConfigPath(t)
-	c, err := jobmanager.GetConfigOutofCluster(p)
+	c, err := kubelayer.GetConfigOutofCluster(p)
 	if err != nil {
 		t.Fatalf("Couldn't get config %v", err)
 	}

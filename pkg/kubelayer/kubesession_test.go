@@ -180,6 +180,7 @@ func TestFindVolumeFail(t *testing.T) {
 }
 
 func TestCreateJobwithVolumes(t *testing.T) {
+	// TODO: this test takes longer than 30 seconds and hits timeout
 	t.Logf("TestCreateJobwithVolumes")
 	const rendername = "render"
 	const sourcename = "source"
