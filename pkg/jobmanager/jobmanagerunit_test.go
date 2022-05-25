@@ -136,7 +136,7 @@ func TestSingleJobSucess(t *testing.T) {
 	jm, mjm := getJobManagerMockedMonitor(t)
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest", "testns")
 	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
@@ -155,13 +155,13 @@ func TestMultiJobSuccess(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest", "testns")
 
 	mjm.On("CreateJob", "alpinetest2", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("jobmanager.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest2", "testns")
 
@@ -198,7 +198,7 @@ func TestSingleJobFail(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Run(func(args mock.Arguments) {
 		mjm.SetJobFail()
 	})
@@ -221,7 +221,7 @@ func TestMultiJobFail(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Run(func(args mock.Arguments) {
 		mjm.SetJobFail()
 	})
