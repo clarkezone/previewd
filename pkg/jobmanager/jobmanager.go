@@ -73,6 +73,7 @@ type Jobmanager struct {
 }
 
 type kubeJobManager struct {
+	kubeSession *kubelayer.KubeSession
 	// TODO: use kubesession for all kube functionality (add it from here)
 	// TODO: move jm kube based tests into kubesession tests
 	// TODO: re-enable integration tests once kube / git dependency gone from job manager
@@ -358,6 +359,21 @@ func isCompleted(ju *jobupdate) (bool, bool) {
 	return false, false
 }
 
+// AddJobtoQueue adds a job to the processing queue
+func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
+	image string, command []string, args []string,
+	mountlist []kubelayer.PVClaimMountRef) error {
+	clarkezoneLog.Debugf("AddJobtoQueue() called with name %v, namespace:%v,"+
+		"image:%v, command:%v, args:%v, pvlist:%v",
+		name, namespace, image, command, args, mountlist)
+	// TODO do we need to deep copy command array?
+	clarkezoneLog.Debugf(" addjobtoqueue: begin add job descriptor to jm.addQueue channel")
+	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
+		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
+	clarkezoneLog.Debugf(" addjobtoqueue: end add job descriptor to jm.addQueue channel")
+	return nil
+}
+
 // FindpvClaimByName searches for a persistentvolumeclaim by name
 func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string, error) {
 	return kubelayer.FindpvClaimByName(jm.currentClientset, pvname, namespace)
@@ -390,21 +406,6 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 		jm.jobnotifiers[job.Name] = notifier
 	}
 	return job, nil
-}
-
-// AddJobtoQueue adds a job to the processing queue
-func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
-	image string, command []string, args []string,
-	mountlist []kubelayer.PVClaimMountRef) error {
-	clarkezoneLog.Debugf("AddJobtoQueue() called with name %v, namespace:%v,"+
-		"image:%v, command:%v, args:%v, pvlist:%v",
-		name, namespace, image, command, args, mountlist)
-	// TODO do we need to deep copy command array?
-	clarkezoneLog.Debugf(" addjobtoqueue: begin add job descriptor to jm.addQueue channel")
-	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
-		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
-	clarkezoneLog.Debugf(" addjobtoqueue: end add job descriptor to jm.addQueue channel")
-	return nil
 }
 
 // DeleteJob deletes a job
