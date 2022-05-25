@@ -55,7 +55,7 @@ type kubeJobManager struct {
 	// TODO: [x] use kubesession for all kube functionality (add it from here)
 	// TODO: [x] rip out kube functionality from jobmanager
 	// TODO: [x] fix jobmanager unit tests
-	// TODO: implement povider on top of kubesession
+	// TODO: [x] implement povider on top of kubesession
 	// TODO: incl successful itegration test
 	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
 }
