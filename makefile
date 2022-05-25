@@ -59,7 +59,8 @@ test:
 
 .PHONY: integration
 integration:
-	go test -tags="integration" --count=1 -v -timeout 15m ./pkg/jobmanager/...
+	go test -tags="integration" --count=1 -v -timeout 15m ./pkg/kubelayer/...
+#	go test -tags="integration" --count=1 -v -timeout 15m ./pkg/jobmanager/...
 .PHONY: dep
 dep:
 	go mod tidy

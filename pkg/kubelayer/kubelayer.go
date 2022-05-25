@@ -87,7 +87,7 @@ func CreateJob(clientset kubernetes.Interface,
 		clarkezoneLog.Errorf("CreateJob: jobsClient.Create failed %v", err)
 		return nil, err
 	}
-	clarkezoneLog.Infof("Created job %v.\n", result.GetObjectMeta().GetName())
+	clarkezoneLog.Infof("Created job %v.", result.GetObjectMeta().GetName())
 	return job, nil
 }
 

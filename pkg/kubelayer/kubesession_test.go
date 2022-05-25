@@ -117,7 +117,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
 	ks := GetKubeSession(t)
-	createNSIfMissing(ks, false, t)
+	createNSIfMissing(ks, true, t)
 	outputjob := RunTestJob(ks, testNamespace, completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
