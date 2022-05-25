@@ -52,8 +52,10 @@ type kubeJobManager struct {
 	kubeSession *kubelayer.KubeSession
 	jobRefs     map[string]string
 
-	// TODO: delete pods accociated with job
 	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
+	// TODO: delete pods accociated with job - ensure volumes are unbound ready
+	// TODO: fire webhook and confirm second job happens successfully
+
 	// TODO: Ensure kubesession tests delete ns at end
 	// TODO: Create ns for Jobmanager integration test and re-enable in makefile
 }
