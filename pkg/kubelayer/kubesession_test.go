@@ -113,7 +113,6 @@ func TestCreateAndSucceed(t *testing.T) {
 
 func TestCreateAndErrorWork(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
-	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
 	ks := GetKubeSession(t)
