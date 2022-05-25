@@ -116,10 +116,12 @@ func newMockJobManager() *MockJobManager {
 	return &mjm
 }
 
-// nolint
 func getJobManagerMockedMonitor(t *testing.T) (*Jobmanager, *MockJobManager) {
 	mjm := newMockJobManager()
-	jm := newjobmanagerinternal(nil, mjm)
+	jm, err := newjobmanagerinternal(nil, mjm)
+	if err != nil {
+		t.Fatalf("unable to create jobmanager")
+	}
 	jm.startMonitor(mjm)
 	return jm, mjm
 }
