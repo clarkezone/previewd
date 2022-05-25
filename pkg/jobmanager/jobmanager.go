@@ -40,6 +40,7 @@ type jobxxx interface {
 // Jobmanager enables scheduling and querying of jobs
 type Jobmanager struct {
 	kubeSession   *kubelayer.KubeSession
+	namespace     string
 	addQueue      chan jobdescriptor
 	monitorExit   chan bool
 	monitorDone   chan bool
@@ -49,6 +50,7 @@ type Jobmanager struct {
 
 type kubeJobManager struct {
 	kubeSession *kubelayer.KubeSession
+	jobRefs     map[string]string
 	// TODO: [x] Copy kuberelated methods to KubeSession
 	// TODO: [x] move jm kube based tests into kubesession tests and enable
 	// TODO: [x] re-run kubesession integration tests individually to ensure they aren't broken by refactor
@@ -56,7 +58,8 @@ type kubeJobManager struct {
 	// TODO: [x] rip out kube functionality from jobmanager
 	// TODO: [x] fix jobmanager unit tests
 	// TODO: [x] implement povider on top of kubesession
-	// TODO: incl successful itegration test
+	// TODO: [x] incl successful itegration test
+	// TODO: add make integration command for jobmanager integration with longer timeout
 	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
 }
 
@@ -64,20 +67,25 @@ type kubeJobManager struct {
 func (o *kubeJobManager) CreateJob(name string, namespace string,
 	image string, command []string, args []string, notifier kubelayer.JobNotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	clarkezoneLog.Debugf("CreateJob called with name:%v, namespace:%v, image:%v", name, namespace,
+		image)
+	o.jobRefs[name] = name
 	return o.kubeSession.CreateJob(name, namespace,
 		image, command, args, notifier, autoDelete, mountlist)
 }
 
 func (o *kubeJobManager) DeleteJob(name string, namespace string) error {
+	clarkezoneLog.Debugf("DeleteJob called with name:%v, namespace:%v", name, namespace)
+	delete(o.jobRefs, name)
 	return o.kubeSession.DeleteJob(name, namespace)
 }
 
 func (o *kubeJobManager) FailedJob(name string, namespace string) {
-	// only used for unit tests
+	clarkezoneLog.Debugf("FailedJob called with name:%v, namespace:%v", name, namespace)
 }
 
 func (o *kubeJobManager) InProgress() bool {
-	panic("we need to refcount or query")
+	return len(o.jobRefs) > 0
 }
 
 // Implement jobxxx interface end
@@ -90,42 +98,21 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*
 	}
 	kubeProvider := kubeJobManager{}
 	jm, err := newjobmanagerinternal(config, &kubeProvider)
-	kubeProvider.kubeSession = jm.kubeSession
 	if err != nil {
 		return nil, err
 	}
 
-	if startwatchers {
-		clarkezoneLog.Debugf("Starting watchers")
-		err := jm.kubeSession.StartWatchers(namespace)
+	kubeProvider.kubeSession = jm.kubeSession
+	kubeProvider.jobRefs = make(map[string]string)
 
+	if startwatchers {
+		err = jm.StartWatchers()
 		if err != nil {
 			return nil, err
 		}
-
-		jm.startMonitor(jm.jobProvider)
-
-		clarkezoneLog.Debugf("watchers failed to start correctly")
-		return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
 	}
 	return jm, nil
 }
-
-// func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (*Jobmanager, error) {
-// 	clarkezoneLog.Debugf("newjobmanagerwithclient called with clientset:%v, namespace:%v",
-// 		clientset, namespace)
-// 	jm := newjobmanagerinternal(nil, nil)
-//
-// 	jm.currentClientset = clientset
-//
-// 	// TODO only if we want watchers
-// 	created := jm.startWatchers(namespace)
-// 	if created {
-// 		return jm, nil
-// 	}
-// 	clarkezoneLog.Debugf("watchers failed to start correctly")
-// 	return nil, fmt.Errorf("unable to create jobmanaer; startwatchers failed")
-// }
 
 func newjobmanagerinternal(config *rest.Config, provider jobxxx) (*Jobmanager, error) {
 	if config != nil {
@@ -151,6 +138,19 @@ func newjobmanagerinternal(config *rest.Config, provider jobxxx) (*Jobmanager, e
 func (jm *Jobmanager) KubeSession() *kubelayer.KubeSession {
 	// TODO: wrap it in an interface?
 	return jm.kubeSession
+}
+
+// StartWatchers starts jobmonitoring infra for cases when these were not started in jobmanager creation
+func (jm *Jobmanager) StartWatchers() error {
+	clarkezoneLog.Debugf("Starting watchers")
+	err := jm.kubeSession.StartWatchers(jm.namespace)
+
+	if err != nil {
+		return err
+	}
+
+	jm.startMonitor(jm.jobProvider)
+	return nil
 }
 
 func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
