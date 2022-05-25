@@ -28,8 +28,11 @@ const (
 	Delete
 )
 
-type jobnotifier func(*batchv1.Job, ResourseStateType)
-type namespacenotifier func(*corev1.Namespace, ResourseStateType)
+// JobNotifier is a function prototype for notifications for job state changes
+type JobNotifier func(*batchv1.Job, ResourseStateType)
+
+// NamespaceNotifier is a function prototype for notifications for job state changes
+type NamespaceNotifier func(*corev1.Namespace, ResourseStateType)
 
 // KubeSession is a session to a k8s cluster
 type KubeSession struct {
@@ -37,8 +40,8 @@ type KubeSession struct {
 	currentClientset   kubernetes.Interface
 	ctx                context.Context
 	cancel             context.CancelFunc
-	jobnotifiers       map[string]jobnotifier
-	namespacenotifiers map[string]namespacenotifier
+	jobnotifiers       map[string]JobNotifier
+	namespacenotifiers map[string]NamespaceNotifier
 }
 
 // Newkubesession creates a new kubesession from a config
@@ -59,8 +62,8 @@ func Newkubesession(config *rest.Config) (*KubeSession, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ks.ctx = ctx
 	ks.cancel = cancel
-	ks.jobnotifiers = make(map[string]jobnotifier)
-	ks.namespacenotifiers = make(map[string]namespacenotifier)
+	ks.jobnotifiers = make(map[string]JobNotifier)
+	ks.namespacenotifiers = make(map[string]NamespaceNotifier)
 	return &ks, nil
 }
 
@@ -72,7 +75,7 @@ func (ks *KubeSession) CreatePersistentVolumeClaim(name string, namespace string
 }
 
 // CreateNamespace creates a new namespace
-func (ks *KubeSession) CreateNamespace(namespace string, notifier namespacenotifier) error {
+func (ks *KubeSession) CreateNamespace(namespace string, notifier NamespaceNotifier) error {
 	clarkezoneLog.Debugf("CreateNamespace() called with namespace:%v", namespace)
 	if notifier != nil {
 		ks.namespacenotifiers[namespace] = notifier
@@ -89,7 +92,7 @@ func (ks *KubeSession) GetNamespace(namespace string) (*corev1.Namespace, error)
 }
 
 // DeleteNamespace deletes a namespace
-func (ks *KubeSession) DeleteNamespace(namespace string, notifier namespacenotifier) error {
+func (ks *KubeSession) DeleteNamespace(namespace string, notifier NamespaceNotifier) error {
 	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
 	if notifier != nil {
 		ks.namespacenotifiers[namespace] = notifier
@@ -100,7 +103,7 @@ func (ks *KubeSession) DeleteNamespace(namespace string, notifier namespacenotif
 
 // CreateJob makes a new job
 func (ks *KubeSession) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier,
+	image string, command []string, args []string, notifier JobNotifier,
 	autoDelete bool, mountlist []PVClaimMountRef) (*batchv1.Job, error) {
 	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v,"+
 		"image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",

@@ -19,7 +19,7 @@ const (
 
 type MockJobManager struct {
 	mock.Mock
-	notifier                jobnotifier
+	notifier                kubelayer.JobNotifier
 	done                    chan bool
 	jobFail                 bool
 	scheduledByMeinProgress int
@@ -27,7 +27,7 @@ type MockJobManager struct {
 
 // Implement jobxxx interface begin
 func (o *MockJobManager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier,
+	image string, command []string, args []string, notifier kubelayer.JobNotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
 	// schedule callbacks to mimic kube
 	o.notifier = notifier
@@ -66,7 +66,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 			},
 		}
 		j.Status = batchv1.JobStatus{Active: 1}
-		o.notifier(j, Create)
+		o.notifier(j, kubelayer.Create)
 
 		if o.jobFail {
 			j = &batchv1.Job{
@@ -76,7 +76,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 				},
 			}
 			j.Status = batchv1.JobStatus{Failed: 1}
-			o.notifier(j, Update)
+			o.notifier(j, kubelayer.Update)
 		} else {
 			j = &batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
@@ -85,7 +85,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 				},
 			}
 			j.Status = batchv1.JobStatus{Succeeded: 1}
-			o.notifier(j, Update)
+			o.notifier(j, kubelayer.Update)
 		}
 	}()
 }
