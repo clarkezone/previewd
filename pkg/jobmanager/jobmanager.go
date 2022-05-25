@@ -32,6 +32,32 @@ const (
 
 type jobnotifier func(*batchv1.Job, ResourseStateType)
 
+type jobdescriptor struct {
+	name       string
+	namespace  string
+	image      string
+	command    []string
+	args       []string
+	notifier   jobnotifier
+	autoDelete bool
+	mountlist  []kubelayer.PVClaimMountRef
+}
+
+type jobupdate struct {
+	job   *batchv1.Job
+	typee ResourseStateType
+}
+
+type jobxxx interface {
+	CreateJob(name string, namespace string,
+		image string, command []string, args []string, notifier jobnotifier,
+		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
+	DeleteJob(name string, namespace string) error
+	FailedJob(name string, namesapce string)
+	// InProgress returns true if jobs we have scheduled are in progress
+	InProgress() bool
+}
+
 // Jobmanager enables scheduling and querying of jobs
 type Jobmanager struct {
 	currentConfig    *rest.Config
@@ -39,10 +65,14 @@ type Jobmanager struct {
 	ctx              context.Context
 	cancel           context.CancelFunc
 	jobnotifiers     map[string]jobnotifier
+	addQueue         chan jobdescriptor
+	monitorExit      chan bool
+	monitorDone      chan bool
+	haveFailedJob    bool
 }
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
-func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
+func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*Jobmanager, error) {
 	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config, namespace)
 	if config == nil {
 		return nil, fmt.Errorf("config supplied is nil")
@@ -56,15 +86,19 @@ func Newjobmanager(config *rest.Config, namespace string) (*Jobmanager, error) {
 	}
 	jm.currentClientset = clientset
 
-	// TODO only if we want watchers
-	clarkezoneLog.Debugf("Starting watchers")
-	created := jm.startWatchers(namespace)
-	if created {
-		clarkezoneLog.Debugf("watchers sarted correctly")
-		return jm, nil
+	if startwatchers {
+		clarkezoneLog.Debugf("Starting watchers")
+		created := jm.startWatchers(namespace)
+		jm.startMonitor(nil)
+		if created {
+			clarkezoneLog.Debugf("watchers sarted correctly")
+			return jm, nil
+		}
+
+		clarkezoneLog.Debugf("watchers failed to start correctly")
+		return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
 	}
-	clarkezoneLog.Debugf("watchers failed to start correctly")
-	return nil, fmt.Errorf("unable to create jobmanager; startwatchers failed")
+	return jm, nil
 }
 
 // nolint
@@ -85,7 +119,11 @@ func newjobmanagerwithclient(clientset kubernetes.Interface, namespace string) (
 }
 
 func newjobmanagerinternal(config *rest.Config) *Jobmanager {
-	clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
+	if config != nil {
+		clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
+	} else {
+		clarkezoneLog.Debugf("newjobmanagerinternal called with nil config")
+	}
 	jm := Jobmanager{}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,7 +132,106 @@ func newjobmanagerinternal(config *rest.Config) *Jobmanager {
 	jm.jobnotifiers = make(map[string]jobnotifier)
 
 	jm.currentConfig = config
+	jm.addQueue = make(chan jobdescriptor)
 	return &jm
+}
+
+func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
+	// TODO ensure monitor isn't already running
+	jobqueue := make([]jobdescriptor, 0)
+	jm.monitorExit = make(chan bool)
+	jm.monitorDone = make(chan bool)
+	go func() {
+		// define queue for structs
+		// create channel to pass to notifiers
+		jobnotifierchannel := make(chan *jobupdate)
+		clarkezoneLog.Debugf("startmonitor() starting job monitor")
+		defer func() {
+			clarkezoneLog.Debugf(" startMonitor: Loop exited")
+			close(jm.monitorExit)
+		}()
+		for {
+			select {
+			case nextJob := <-jm.addQueue:
+				clarkezoneLog.Debugf(" startMonitor(): received job from jm.addQueue channel")
+				// push onto queue
+				if nextJob.name != "" {
+					clarkezoneLog.Debugf(" startMonitor(): nextJob name is not empty hence adding to jobqueue")
+					jobqueue = append(jobqueue, nextJob)
+				} else {
+					clarkezoneLog.Debugf(" startMonitor(): nextJob name is empty hence not adding to jobqueue")
+				}
+			case update := <-jobnotifierchannel:
+				clarkezoneLog.Debugf(" startMonitor(): received job notification from jobnotifierchannel")
+				// k8s job completed is jobcommpleted function
+				readyNext, failed := isCompleted(update)
+				jm.haveFailedJob = failed
+				switch {
+				case readyNext && !failed:
+					clarkezoneLog.Debugf(" startMonitor(): successfully completed job detected, deleting job")
+					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
+					if err != nil {
+						clarkezoneLog.Errorf("Unable to delete job %v due to error %v", update.job.Name, err)
+					}
+				case readyNext && failed:
+					clarkezoneLog.Debugf(" startMonitor(): Failed completed job name:%v namespace:%v, cannot process further jobs",
+						update.job.Name, update.job.Namespace)
+					jobcontroller.FailedJob(update.job.Name, update.job.Namespace)
+				default:
+					clarkezoneLog.Debugf(" startMonitor(): Received non completed update")
+				}
+			case <-jm.monitorDone:
+				clarkezoneLog.Debugf(" startMonitor(): jm.monitorDone channel signalled, exiting loop")
+				return
+			}
+			// if queue contains jobs and no jobs in progress, schedule new job
+			// signal to notifierchannel
+			jm.scheduleIfPossible(&jobqueue, jobcontroller, jobnotifierchannel)
+		} // for
+	}()
+}
+
+func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
+	jobcontroller jobxxx, jobnotifierchannel chan *jobupdate) {
+	jobQueueLength := len(*jobqueue)
+	jobInProgress := jobcontroller.InProgress()
+	clarkezoneLog.Debugf("scheduleIfPossible called jobqueue length:%v, jobcontroller.InProgress():%v",
+		jobQueueLength, jobInProgress)
+	if jobQueueLength > 0 && !jobInProgress {
+		clarkezoneLog.Debugf(" scheduleIfPossible attempting to schedule")
+		if jm.haveFailedJob {
+			clarkezoneLog.Debugf(" scheduleIfPossible jobqueue contains > 1 jobs, but we have a failed job hence not scheduling")
+		} else {
+			clarkezoneLog.Debugf(" scheduleIfPossible jobqueue contains > 1 jobs, scheduling")
+			nextjob := (*jobqueue)[0]
+			*jobqueue = (*jobqueue)[1:]
+			notifier := func(job *batchv1.Job, typee ResourseStateType) {
+				clarkezoneLog.Debugf(" notifier called: Got job in outside world %v", typee)
+
+				clarkezoneLog.Debugf(" notifier begin send job update to jobnotifierchannel")
+				jobnotifierchannel <- &jobupdate{job, typee}
+				clarkezoneLog.Debugf(" notifier end send job update to jobnotifierchannel")
+			}
+			_, err := jobcontroller.CreateJob(nextjob.name, nextjob.namespace, nextjob.image, nextjob.command,
+				nextjob.args, notifier, false, nextjob.mountlist)
+			if err != nil {
+				clarkezoneLog.Debugf(" scheduleIfPossible Error creating job %v", err)
+			}
+		}
+	} else {
+		clarkezoneLog.Debugf(" scheduleIfPossible: nothing to schedule")
+	}
+}
+
+func (jm *Jobmanager) stopMonitor() {
+	clarkezoneLog.Debugf("stopMonitor begin")
+	clarkezoneLog.Debugf(" stopMonitor begin send true to monitorDone channel")
+	jm.monitorDone <- true
+	clarkezoneLog.Debugf(" stopMonitor end send true to monitorDone channel")
+	clarkezoneLog.Debugf(" stopMonitor begin wait for monitor exit")
+	<-jm.monitorExit
+	clarkezoneLog.Debugf(" stopMonitor end wait for monitor exit")
+	clarkezoneLog.Debugf("stopMonitor end")
 }
 
 func (jm *Jobmanager) startWatchers(namespace string) bool {
@@ -174,6 +311,23 @@ func (jm *Jobmanager) getJobEventHandlers() *cache.ResourceEventHandlerFuncs {
 	}
 }
 
+func isCompleted(ju *jobupdate) (bool, bool) {
+	clarkezoneLog.Debugf("isCompleted() type:%v name:%v namespace:%v", ju.typee, ju.job.Name, ju.job.Namespace)
+
+	if ju.typee == Update && ju.job.Status.Failed > 0 {
+		clarkezoneLog.Debugf(" isCompleted Job failed")
+		return true, true
+	}
+
+	if ju.typee == Update && ju.job.Status.Succeeded > 0 {
+		clarkezoneLog.Debugf(" isCompleted Job succeeded")
+		return true, false
+	}
+
+	clarkezoneLog.Debugf(" isCompleted Job not complete")
+	return false, false
+}
+
 // FindpvClaimByName searches for a persistentvolumeclaim by name
 func (jm *Jobmanager) FindpvClaimByName(pvname string, namespace string) (string, error) {
 	return kubelayer.FindpvClaimByName(jm.currentClientset, pvname, namespace)
@@ -208,31 +362,25 @@ func (jm *Jobmanager) CreateJob(name string, namespace string,
 	return job, nil
 }
 
+// AddJobtoQueue adds a job to the processing queue
+func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
+	image string, command []string, args []string,
+	mountlist []kubelayer.PVClaimMountRef) error {
+	clarkezoneLog.Debugf("AddJobtoQueue() called with name %v, namespace:%v,"+
+		"image:%v, command:%v, args:%v, pvlist:%v",
+		name, namespace, image, command, args, mountlist)
+	// TODO do we need to deep copy command array?
+	clarkezoneLog.Debugf(" addjobtoqueue: begin add job descriptor to jm.addQueue channel")
+	jm.addQueue <- jobdescriptor{name: name, namespace: namespace, image: image, command: command,
+		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
+	clarkezoneLog.Debugf(" addjobtoqueue: end add job descriptor to jm.addQueue channel")
+	return nil
+}
+
 // DeleteJob deletes a job
 func (jm *Jobmanager) DeleteJob(name string, namespace string) error {
 	clarkezoneLog.Debugf("DeleteJob() called with name:%v namespace:%v", name, namespace)
 	return kubelayer.DeleteJob(jm.currentClientset, name, namespace)
-}
-
-// CreatePersistentVolumeClaim creates a new persistentvolumeclaim
-func (jm *Jobmanager) CreatePersistentVolumeClaim(name string, namespace string) error {
-	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
-	_, err := kubelayer.CreatePersistentVolumeClaim(jm.currentClientset, name, namespace)
-	return err
-}
-
-// CreateNamespace creates a new namespace
-func (jm *Jobmanager) CreateNamespace(namespace string) error {
-	clarkezoneLog.Debugf("CreateNamespace() called with namespace:%v", namespace)
-	_, err := kubelayer.CreateNamespace(jm.currentClientset, namespace)
-	return err
-}
-
-// DeleteNamespace deletes a namespace
-func (jm *Jobmanager) DeleteNamespace(namespace string) error {
-	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
-	err := kubelayer.DeleteNamespace(jm.currentClientset, namespace)
-	return err
 }
 
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster

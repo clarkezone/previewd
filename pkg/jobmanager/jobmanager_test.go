@@ -33,13 +33,31 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func GetJobManager(t *testing.T, ns string) (*Jobmanager, string) {
+func getTestConfig(t *testing.T) *rest.Config {
+	configpath := path.Join(gitRoot, configPath)
+	c, err := GetConfigOutofCluster(configpath)
+	if err != nil {
+		t.Fatalf("Couldn't get config %v", err)
+	}
+	return c
+}
+
+func GetJobManager(t *testing.T, ns string, startmonitors bool) (*Jobmanager, string) {
 	c := getTestConfig(t)
-	jm, err := Newjobmanager(c, ns)
+	jm, err := Newjobmanager(c, ns, startmonitors)
 	if err != nil {
 		t.Errorf("job manager create failed")
 	}
 	return jm, ns
+}
+
+func GetKubeSession(t *testing.T) *kubelayer.KubeSession {
+	c := getTestConfig(t)
+	ks, err := kubelayer.Newkubesession(c)
+	if err != nil {
+		t.Fatalf("failed to get kubesession %v", err)
+	}
+	return ks
 }
 
 func RunTestJob(jm *Jobmanager, ns string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
@@ -93,20 +111,11 @@ func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, t
 	return completechannel, deletechannel, notifier
 }
 
-func getTestConfig(t *testing.T) *rest.Config {
-	configpath := path.Join(internal.GitRoot, "integration/secrets/k3s-c2.yaml")
-	c, err := GetConfigOutofCluster(configpath)
-	if err != nil {
-		t.Fatalf("Couldn't get config %v", err)
-	}
-	return c
-}
-
 func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
-	jm, ns := GetJobManager(t, testNamespace)
+	jm, ns := GetJobManager(t, testNamespace, true)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, nil, notifier, nil)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
@@ -118,7 +127,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 	// SkipCI(t)
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	jm, ns := GetJobManager(t, testNamespace)
+	jm, ns := GetJobManager(t, testNamespace, true)
 	outputjob := RunTestJob(jm, ns, completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
@@ -128,7 +137,7 @@ func TestCreateAndErrorWork(t *testing.T) {
 func TestFindVolumeSuccess(t *testing.T) {
 	const name = "render"
 	const namespace = "jekyllpreviewv2"
-	jm, ns := GetJobManager(t, namespace)
+	jm, ns := GetJobManager(t, namespace, true)
 	render, err := jm.FindpvClaimByName(name, ns)
 	if err != nil {
 		t.Fatalf("can't find pvcalim render %v", err)
@@ -141,7 +150,7 @@ func TestFindVolumeSuccess(t *testing.T) {
 func TestFindVolumeFail(t *testing.T) {
 	const name = "notexists"
 	const namespace = "jekyllpreviewv2"
-	jm, ns := GetJobManager(t, namespace)
+	jm, ns := GetJobManager(t, namespace, true)
 	render, err := jm.FindpvClaimByName(name, ns)
 	if err != nil {
 		t.Fatalf("error finding pvcalim %v: %v", name, err)
@@ -157,19 +166,20 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	const sourcename = "source"
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	jm, ns := GetJobManager(t, testNamespace)
+	jm, ns := GetJobManager(t, testNamespace, true)
+	ks := GetKubeSession(t)
 
-	err := jm.CreateNamespace(testNamespace)
+	err := ks.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
+	err = ks.CreatePersistentVolumeClaim(sourcename, testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim(rendername, testNamespace)
+	err = ks.CreatePersistentVolumeClaim(rendername, testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
@@ -198,30 +208,30 @@ func TestCreateJobwithVolumes(t *testing.T) {
 }
 
 func TestCreateDeleteNs(t *testing.T) {
-	jm, _ := GetJobManager(t, testNamespace)
-	err := jm.CreateNamespace(testNamespace)
+	ks := GetKubeSession(t)
+	err := ks.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
-	err = jm.DeleteNamespace(testNamespace)
+	err = ks.DeleteNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to delete namespace %v", err)
 	}
 }
 
 func TestCreatePersistentVolumeClaim(t *testing.T) {
-	jm, _ := GetJobManager(t, testNamespace)
-	err := jm.CreateNamespace(testNamespace)
+	ks := GetKubeSession(t)
+	err := ks.CreateNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create namespace %v", err)
 	}
 
-	err = jm.CreatePersistentVolumeClaim("source", testNamespace)
+	err = ks.CreatePersistentVolumeClaim("source", testNamespace)
 	if err != nil {
 		t.Fatalf("unable to creates persistent volume claim %v", err)
 	}
 
-	err = jm.DeleteNamespace(testNamespace)
+	err = ks.DeleteNamespace(testNamespace)
 	if err != nil {
 		t.Fatalf("unable to delete namespace %v", err)
 	}

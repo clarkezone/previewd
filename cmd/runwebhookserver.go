@@ -80,7 +80,7 @@ func PerformActions(c *rest.Config, repo string, localRootDir string, initialBra
 
 	var err error
 	if webhooklisten || initialbuild {
-		jm, err = jobmanager.Newjobmanager(c, namespace)
+		jm, err = jobmanager.Newjobmanager(c, namespace, true)
 		if err != nil {
 			return err
 		}
