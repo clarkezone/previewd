@@ -35,13 +35,14 @@ func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
 }
 
 func (o *CompletionTrackingJobManager) DeleteJob(name string, namespace string) error {
+	err := o.wrappedJob.DeleteJob(name, namespace)
 	o.done <- true
-	return o.wrappedJob.DeleteJob(name, namespace)
+	return err
 }
 
 func (o *CompletionTrackingJobManager) FailedJob(name string, namespace string) {
-	o.done <- true
 	o.wrappedJob.FailedJob(name, namespace)
+	o.done <- true
 }
 
 func (o *CompletionTrackingJobManager) InProgress() bool {
@@ -53,7 +54,7 @@ func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
 	for i := 0; i < numjobs; i++ {
 		select {
 		case <-o.done:
-		case <-time.After(10 * time.Second):
+		case <-time.After(20 * time.Second):
 			t.Fatalf("No done before 10 second timeout")
 		}
 	}
