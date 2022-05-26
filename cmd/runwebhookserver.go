@@ -18,7 +18,6 @@ import (
 	"github.com/clarkezone/previewd/pkg/webhooklistener"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/rest"
 
 	"github.com/clarkezone/previewd/internal"
@@ -127,16 +126,9 @@ func initialClone(repo string, initialBranch string) error {
 }
 
 func initialBuild(namespace string) error {
-	notifier := (func(job *batchv1.Job, typee jobmanager.ResourseStateType) {
-		log.Printf("Got job in outside world %v", typee)
-
-		if typee == jobmanager.Update && job.Status.Active == 0 && job.Status.Failed > 0 {
-			log.Printf("Failed job detected")
-		}
-	})
 	const rendername = "render"
 	const sourcename = "source"
-	render, err := jm.FindpvClaimByName(rendername, namespace)
+	render, err := jm.KubeSession().FindpvClaimByName(rendername, namespace)
 	if err != nil {
 		clarkezoneLog.Errorf("can't find pvcalim render %v", err)
 		return err
@@ -145,7 +137,7 @@ func initialBuild(namespace string) error {
 		clarkezoneLog.Errorf("render name empty")
 		return fmt.Errorf("render name empty")
 	}
-	source, err := jm.FindpvClaimByName(sourcename, namespace)
+	source, err := jm.KubeSession().FindpvClaimByName(sourcename, namespace)
 	if err != nil {
 		clarkezoneLog.Errorf("can't find pvcalim source %v", err)
 		return err
@@ -154,8 +146,8 @@ func initialBuild(namespace string) error {
 		clarkezoneLog.Errorf("source name empty")
 		return fmt.Errorf("source name empty")
 	}
-	renderref := jm.CreatePvCMountReference(render, "/site", false)
-	srcref := jm.CreatePvCMountReference(source, "/src", true)
+	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
+	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 	var imagePath string
 	fmt.Printf("%v", runtime.GOARCH)
@@ -166,8 +158,8 @@ func initialBuild(namespace string) error {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	_, err = jm.CreateJob("jekyll-render-container", namespace, imagePath, command,
-		params, notifier, false, refs)
+	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
+		params, refs)
 	if err != nil {
 		log.Printf("Failed to create job: %v\n", err.Error())
 	}

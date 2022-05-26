@@ -19,7 +19,7 @@ const (
 
 type MockJobManager struct {
 	mock.Mock
-	notifier                jobnotifier
+	notifier                kubelayer.JobNotifier
 	done                    chan bool
 	jobFail                 bool
 	scheduledByMeinProgress int
@@ -27,7 +27,7 @@ type MockJobManager struct {
 
 // Implement jobxxx interface begin
 func (o *MockJobManager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier jobnotifier,
+	image string, command []string, args []string, notifier kubelayer.JobNotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
 	// schedule callbacks to mimic kube
 	o.notifier = notifier
@@ -66,7 +66,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 			},
 		}
 		j.Status = batchv1.JobStatus{Active: 1}
-		o.notifier(j, Create)
+		o.notifier(j, kubelayer.Create)
 
 		if o.jobFail {
 			j = &batchv1.Job{
@@ -76,7 +76,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 				},
 			}
 			j.Status = batchv1.JobStatus{Failed: 1}
-			o.notifier(j, Update)
+			o.notifier(j, kubelayer.Update)
 		} else {
 			j = &batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
@@ -85,7 +85,7 @@ func (o *MockJobManager) launchSuccess(name string, namespace string) {
 				},
 			}
 			j.Status = batchv1.JobStatus{Succeeded: 1}
-			o.notifier(j, Update)
+			o.notifier(j, kubelayer.Update)
 		}
 	}()
 }
@@ -116,10 +116,12 @@ func newMockJobManager() *MockJobManager {
 	return &mjm
 }
 
-// nolint
 func getJobManagerMockedMonitor(t *testing.T) (*Jobmanager, *MockJobManager) {
-	jm := newjobmanagerinternal(nil)
 	mjm := newMockJobManager()
+	jm, err := newjobmanagerinternal(nil, mjm)
+	if err != nil {
+		t.Fatalf("unable to create jobmanager")
+	}
 	jm.startMonitor(mjm)
 	return jm, mjm
 }
@@ -134,7 +136,7 @@ func TestSingleJobSucess(t *testing.T) {
 	jm, mjm := getJobManagerMockedMonitor(t)
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest", "testns")
 	err := jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
@@ -153,13 +155,13 @@ func TestMultiJobSuccess(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest", "testns")
 
 	mjm.On("CreateJob", "alpinetest2", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Return(&batchv1.Job{}, nil)
 	mjm.On("DeleteJob", "alpinetest2", "testns")
 
@@ -196,7 +198,7 @@ func TestSingleJobFail(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Run(func(args mock.Arguments) {
 		mjm.SetJobFail()
 	})
@@ -219,7 +221,7 @@ func TestMultiJobFail(t *testing.T) {
 
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
-		mock.AnythingOfType("jobmanager.jobnotifier"), false,
+		mock.AnythingOfType("kubelayer.JobNotifier"), false,
 		[]kubelayer.PVClaimMountRef{}).Run(func(args mock.Arguments) {
 		mjm.SetJobFail()
 	})

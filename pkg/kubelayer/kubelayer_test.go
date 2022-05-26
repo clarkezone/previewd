@@ -4,15 +4,16 @@ import (
 	"os"
 	"testing"
 
+	"github.com/clarkezone/previewd/internal"
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes/fake"
-
-	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
 	clarkezoneLog.Init(logrus.DebugLevel)
+	internal.SetupGitRoot()
 	code := m.Run()
 	os.Exit(code)
 }
