@@ -30,7 +30,31 @@ func (p webhooklistenmockprovider) webhookListen() {
 }
 
 func Test_CmdBase(t *testing.T) {
-	// ensure clone, render, webhook
+	// TODO: mock ensure clone, render, webhook
+
+	m := &webhooklistenmockprovider{}
+	cmd := getRunWebhookServerCmd(m)
+	cmd.SetArgs([]string{"--targetrepo", "http://foo",
+		"--localdir", "/tmp", "--kubeconfig", internal.GetTestConfigPath(t), "--namespace", testNamespace})
+
+	b := bytes.NewBufferString("")
+	cmd.SetOut(b)
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := ioutil.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(out) != "" {
+		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
+	}
+}
+
+func Test_CmdBaseInClusterDefaultFail(t *testing.T) {
+	// TODO: mock ensure clone, render, webhook
+	// TODO: namespace manditory if render
 	m := &webhooklistenmockprovider{}
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
@@ -51,8 +75,10 @@ func Test_CmdBase(t *testing.T) {
 	}
 }
 
+// TODO: test that when initialrender is on, there is a namespace parameter
+
 func Test_CmdCloneOnly(t *testing.T) {
-	// ensure no initial clone, no render, no webhook
+	// TODO: mock ensure no initial clone, no render, no webhook
 	m := &webhooklistenmockprovider{}
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
@@ -75,7 +101,7 @@ func Test_CmdCloneOnly(t *testing.T) {
 }
 
 func Test_CmdInitialRenderHookListen(t *testing.T) {
-	// ensure no initial clone, initial render, listen
+	// TODO: Mock ensure no initial clone, initial render, listen
 	m := &webhooklistenmockprovider{}
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
@@ -94,7 +120,6 @@ func Test_CmdInitialRenderHookListen(t *testing.T) {
 	if string(out) != "" {
 		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
 	}
-
 }
 
 // GetTestConfig returns a local testing config for k8s
