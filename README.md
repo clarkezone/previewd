@@ -45,14 +45,18 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] Create PersistentVolume and PersistentVolumeClaim imperitively
   - [x] `TestCreateJobwithVolumes` test passes
   - [x] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
-- [ ] MultiJob support
+- [x] MultiJob support
   - [x] Test for multijob support one passing jobs
   - [x] Test for multijob support two passing jobs
   - [x] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes
   - [x] Implement provider against actual k8s: TestCreateJobwithVolumes passes with multijob
   - [x] Refactor JobManager to extract k8s specifics into kubesession; jobmanager uses a kubesession
-  - [ ] Test for multijob support two passing jobs actual k8s
-  - [ ] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes (ensure we can detect pending jobs due to unbound pvcs)
+  - [x] Test for multijob support two passing jobs actual k8s
+- [ ] End to end test for webhook
+  - [ ] Hook up clone only cmdline option (testprep)
+  - [ ] Hook up initial render (no clone), webhook arg (e2etest)
+  - [ ] Prepare environment with PV populated from repo
+  - [ ] Make E2E test work
 
 # End to end secenario for clone, webhook, render via job works from cmdline
 
@@ -81,3 +85,4 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [ ] Look at codecov as alternative for coverlet
 - [ ] precommit calls golangci-lint
 - [ ] add dev container
+- [ ] Test for multijob support failed job (eg due to can't bind PV) doesn't get deleted, halt all jobs due to locked volumes (ensure we can detect pending jobs due to unbound pvcs)
