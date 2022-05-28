@@ -55,8 +55,10 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 - [ ] End to end test for webhook
   - [ ] Hook up clone only cmdline option (testprep)
   - [ ] Hook up initial render (no clone), webhook arg (e2etest)
-  - [ ] Prepare environment with PV populated from repo
+  - [ ] verify exe and docker container can do initial clone
+  - [ ] Prepare environment with PV populated from repo by creating job using previewd container from CI
   - [ ] Make E2E test work
+  - [ ] e2e test works with okteto / minikube / kind in default namespace
 
 # End to end secenario for clone, webhook, render via job works from cmdline
 
