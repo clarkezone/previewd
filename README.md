@@ -53,9 +53,9 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
   - [x] Refactor JobManager to extract k8s specifics into kubesession; jobmanager uses a kubesession
   - [x] Test for multijob support two passing jobs actual k8s
 - [ ] End to end test for webhook
-  - [ ] Hook up clone only cmdline option (testprep)
-  - [ ] Hook up initial render (no clone), webhook arg (e2etest)
-  - [ ] verify exe and docker container can do initial clone
+  - [x] Hook up clone only cmdline option (testprep)
+  - [x] Hook up initial render (no clone), webhook arg (e2etest)
+  - [x] verify exe
   - [ ] Prepare environment with PV populated from repo by creating job using previewd container from CI
   - [ ] Make E2E test work
   - [ ] e2e test works with okteto / minikube / kind in default namespace
