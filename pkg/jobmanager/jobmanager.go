@@ -51,21 +51,13 @@ type Jobmanager struct {
 type kubeJobManager struct {
 	kubeSession *kubelayer.KubeSession
 	jobRefs     map[string]string
-	// TODO: [x] Copy kuberelated methods to KubeSession
-	// TODO: [x] move jm kube based tests into kubesession tests and enable
-	// TODO: [x] re-run kubesession integration tests individually to ensure they aren't broken by refactor
-	// TODO: [x] use kubesession for all kube functionality (add it from here)
-	// TODO: [x] rip out kube functionality from jobmanager
-	// TODO: [x] fix jobmanager unit tests
-	// TODO: [x] implement povider on top of kubesession
-	// TODO: [x] incl successful itegration test
-	// TODO: [x] add make integration command for jobmanager integration with longer timeout
-	// TODO: Rebase ready for PR
+
+	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
+	// [x] TODO: delete pods accociated with job - ensure volumes are unbound ready
+	// TODO: fire webhook and confirm second job happens successfully
 
 	// TODO: Ensure kubesession tests delete ns at end
 	// TODO: Create ns for Jobmanager integration test and re-enable in makefile
-	// TODO: delete pods accociated with job
-	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
 }
 
 // Implement jobxxx interface begin

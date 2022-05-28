@@ -169,11 +169,13 @@ func DeleteJob(clientset kubernetes.Interface, name string, namespace string) er
 	} else {
 		jobsClient = clientset.BatchV1().Jobs(namespace)
 	}
+	foo := metav1.DeletePropagationForeground
 	meta := metav1.DeleteOptions{
-		TypeMeta:           metav1.TypeMeta{},
 		GracePeriodSeconds: new(int64),
-		Preconditions:      &metav1.Preconditions{},
+		PropagationPolicy:  &foo,
+		DryRun:             []string{},
 	}
+
 	return jobsClient.Delete(context.TODO(), name, meta)
 }
 
