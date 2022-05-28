@@ -46,11 +46,13 @@ type xxxProvider struct {
 func getRunWebhookServerCmd(p providers) *cobra.Command {
 	currentProvider = p
 	command := &cobra.Command{
+		// TODO: update documentation once flags stable
 		Use:   "runwebhookserver --targetrepo <target repo URL> --localdir <path to local dir>",
 		Short: "A brief description of your command",
 		Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
+./bin/previewd runwebhookserver --targetrepo test --localdir /tmp --initialclone=false --initialbuild=false --webhooklisten=false
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			err := internal.ValidateEnv()
@@ -62,9 +64,9 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 		RunE: func(cmd *cobra.Command, args []string) error {
 			previewserver := false
 
-			clarkezoneLog.Successf("runwebhookserver with port: %v TargetRepo:%v localdir:%v initialbranch:%v namespace:'%v'",
+			clarkezoneLog.Successf("runwebhookserver with port: %v, TargetRepo:%v, localdir:%v, initialbranch:%v, namespace:'%v'",
 				internal.Port, internal.TargetRepo, internal.LocalDir, internal.InitialBranch, internal.Namespace)
-			clarkezoneLog.Successf(" clone on run:%v build on run:%v start webhook server:%v start preview server:%v",
+			clarkezoneLog.Successf(" clone on run:%v, build on run:%v, start webhook server:%v, start preview server:%v",
 				internal.InitialClone, internal.InitialBuild, internal.WebhookListen, previewserver)
 
 			p := xxxProvider{}
@@ -81,11 +83,14 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 		},
 	}
 
-	setupFlags(command)
+	err := setupFlags(command)
+	if err != nil {
+		panic(err)
+	}
 	return command
 }
 
-func setupFlags(command *cobra.Command) {
+func setupFlags(command *cobra.Command) error {
 	command.PersistentFlags().StringVarP(&internal.TargetRepo, internal.TargetRepoVar, "t",
 		viper.GetString(internal.TargetRepoVar), "url to target repo to clone")
 
@@ -94,18 +99,38 @@ func setupFlags(command *cobra.Command) {
 
 	command.PersistentFlags().StringVarP(&internal.KubeConfigPath, internal.KubeConfigPathVar, "k",
 		viper.GetString(internal.KubeConfigPathVar), "absolute path to a valid kubeconfig file")
+	err := viper.BindPFlag(internal.KubeConfigPathVar, command.PersistentFlags().Lookup(internal.KubeConfigPathVar))
+	if err != nil {
+		return err
+	}
 
 	command.PersistentFlags().StringVarP(&internal.Namespace, internal.NamespaceVar, "n",
 		viper.GetString(internal.NamespaceVar), "Kube namespace for creating resources")
+	err = viper.BindPFlag(internal.NamespaceVar, command.PersistentFlags().Lookup(internal.NamespaceVar))
+	if err != nil {
+		return err
+	}
 
 	command.PersistentFlags().BoolVarP(&internal.InitialClone, internal.InitialCloneVar, "c",
 		viper.GetBool(internal.InitialCloneVar), "perform clone at startup")
-
+	err = viper.BindPFlag(internal.InitialCloneVar, command.PersistentFlags().Lookup(internal.InitialCloneVar))
+	if err != nil {
+		return err
+	}
 	command.PersistentFlags().BoolVarP(&internal.InitialBuild, internal.InitialBuildVar, "b",
 		viper.GetBool(internal.InitialBuildVar), "perform build at startup")
+	err = viper.BindPFlag(internal.InitialBuildVar, command.PersistentFlags().Lookup(internal.InitialBuildVar))
+	if err != nil {
+		return err
+	}
 
 	command.PersistentFlags().BoolVarP(&internal.WebhookListen, internal.WebhookListenVar, "w",
 		viper.GetBool(internal.WebhookListenVar), "start webhook listener on startup")
+	err = viper.BindPFlag(internal.WebhookListenVar, command.PersistentFlags().Lookup(internal.WebhookListenVar))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func getConfig(ib bool, wl bool) (*rest.Config, error) {

@@ -81,9 +81,11 @@ func Test_CmdCloneOnly(t *testing.T) {
 	m := &webhooklistenmockprovider{}
 	m.On("initialClone", "http://foo", "main")
 	cmd := getRunWebhookServerCmd(m)
-	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", "/tmp", "--initialclone", "true",
-		"--initialbuild", "false", "--webhooklisten", "false"})
+	// Note that for bool flags they cannot be passed in without =
+	// or as separate strings for key and value
+	cmd.SetArgs([]string{"--targetrepo=http://foo",
+		"--localdir=/tmp", "--initialclone=false",
+		"--initialbuild=false", "--webhooklisten=false"})
 
 	err := cmd.Execute()
 	if err != nil {
