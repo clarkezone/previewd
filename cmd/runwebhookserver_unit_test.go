@@ -43,7 +43,7 @@ func (*webhooklistenmockprovider) needInitialization() bool {
 
 func Test_CmdBase(t *testing.T) {
 	m := &webhooklistenmockprovider{}
-	m.On("initialClone", "http://foo", "main")
+	m.On("initialClone", "http://foo", "")
 	m.On("initialBuild", "testns")
 	m.On("webhookListen")
 
@@ -75,7 +75,7 @@ func Test_CmdBaseInClusterDefaultFail(t *testing.T) {
 
 func Test_CmdCloneOnly(t *testing.T) {
 	m := &webhooklistenmockprovider{}
-	m.On("initialClone", "http://foo", "main")
+	m.On("initialClone", "http://foo", "")
 	cmd := getRunWebhookServerCmd(m)
 
 	// Note that for bool flags they cannot be passed in without =

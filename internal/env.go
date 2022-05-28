@@ -86,7 +86,6 @@ func init() {
 	viper.SetDefault(InitialBuildVar, true)
 	viper.SetDefault(InitialCloneVar, true)
 	viper.SetDefault(WebhookListenVar, true)
-	viper.SetDefault(InitialBranchVar, initialBranchDefault)
 
 	Port = viper.GetInt(PortVar)
 	LogLevel = viper.GetString(LogLevelVar)
