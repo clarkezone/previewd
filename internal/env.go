@@ -74,7 +74,7 @@ var (
 	// WebhookListen indicates if the webhook should listener should be run at startup time
 	WebhookListen bool
 
-	// InitialBarnch holds the branch that should be cloned on startup
+	// InitialBranch holds the branch that should be cloned on startup
 	InitialBranch string
 )
 
