@@ -44,8 +44,6 @@ func (*webhooklistenmockprovider) needInitialization() bool {
 }
 
 func Test_CmdBase(t *testing.T) {
-	// TODO: mock ensure clone, render, webhook
-
 	m := &webhooklistenmockprovider{}
 	m.On("initialClone", "http://foo", "main")
 	m.On("initialBuild", "testns")
@@ -69,20 +67,11 @@ func Test_CmdBaseInClusterDefaultFail(t *testing.T) {
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
 		"--localdir", "/tmp", "--namespace", "testns"})
 
-	// TODO: should error out if detects not in cluster and no kubeclient string
-
-	b := bytes.NewBufferString("")
-	cmd.SetOut(b)
+	// Simulate running in cluster
+	internal.KubeConfigPath = ""
 	err := cmd.Execute()
-	if err != nil {
-		t.Fatal(err)
-	}
-	out, err := ioutil.ReadAll(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(out) != "" {
-		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
+	if err == nil {
+		t.Fatal("We should have an error for not running in cluster")
 	}
 }
 
