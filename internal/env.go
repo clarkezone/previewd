@@ -40,6 +40,10 @@ const (
 
 	// WebhookListenVar is name of environment variable for the webhook listen flag
 	WebhookListenVar = "webhooklisten"
+
+	// InitialBranchVar is the name environment variable for the webhook listen flag
+	InitialBranchVar     = "initialbranch"
+	initialBranchDefault = "main"
 )
 
 var (
@@ -69,6 +73,9 @@ var (
 
 	// WebhookListen indicates if the webhook should listener should be run at startup time
 	WebhookListen bool
+
+	// InitialBarnch holds the branch that should be cloned on startup
+	InitialBranch string
 )
 
 func init() {
@@ -79,6 +86,7 @@ func init() {
 	viper.SetDefault(InitialBuildVar, true)
 	viper.SetDefault(InitialBuildVar, true)
 	viper.SetDefault(WebhookListenVar, true)
+	viper.SetDefault(InitialBranch, initialBranchDefault)
 
 	Port = viper.GetInt(PortVar)
 	LogLevel = viper.GetString(LogLevelVar)
@@ -89,6 +97,7 @@ func init() {
 	InitialClone = viper.GetBool(InitialCloneVar)
 	InitialBuild = viper.GetBool(InitialBuildVar)
 	WebhookListen = viper.GetBool(WebhookListenVar)
+	InitialBranch = viper.GetString(InitialBranchVar)
 }
 
 func getDefaultKubeConfig() string {

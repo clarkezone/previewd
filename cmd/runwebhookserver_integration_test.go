@@ -59,7 +59,7 @@ func TestPerformActions(t *testing.T) {
 
 	repo, localdir, _, _, _ := internal.Getenv(t)
 	c := GetTestConfig(t)
-	err = PerformActions(currentProvider, c, repo, localdir, "main", false, "testns", false, false, true, true)
+	err = PerformActions(currentProvider, c, repo, localdir, "main", "testns", false, false, true, true)
 	if err != nil {
 		t.Fatalf("Performactions failed %v", err)
 	}

@@ -49,11 +49,13 @@ func Test_CmdBase(t *testing.T) {
 
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", "/tmp", "--kubeconfig", internal.GetTestConfigPath(t), "--namespace", testNamespace})
+		"--localdir", "/tmp", "--kubeconfigpath", internal.GetTestConfigPath(t), "--namespace", testNamespace})
 
 	b := bytes.NewBufferString("")
 	cmd.SetOut(b)
 	err := cmd.Execute()
+
+	m.AssertExpectations(t)
 	if err != nil {
 		t.Fatal(err)
 	}

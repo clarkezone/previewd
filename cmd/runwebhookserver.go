@@ -61,8 +61,16 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 			clarkezoneLog.Successf("RunE with port: %v TargetRepo:%v localdir:%v",
 				internal.Port, internal.TargetRepo, internal.LocalDir)
 			clarkezoneLog.Infof("runwebhookserver called")
-			// err := PerformActions(repo, localRootDir, initalBranchName, incluster, "jekyllpreviewv2", webhooklisten)
-			return nil
+			p := xxxProvider{}
+			c, err := getConfig()
+			if err != nil {
+				return err
+			}
+
+			err = PerformActions(&p, c, internal.TargetRepo, internal.LocalDir,
+				internal.InitialBranch,
+				internal.Namespace, internal.WebhookListen, false, internal.InitialBuild, internal.InitialClone)
+			return err
 		},
 	}
 	command.PersistentFlags().StringVarP(&internal.TargetRepo, internal.TargetRepoVar, "t",
@@ -93,12 +101,26 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 	return command
 }
 
+func getConfig() (*rest.Config, error) {
+	var c *rest.Config
+	var err error
+	if internal.KubeConfigPath == "" {
+		c, err = kubelayer.GetConfigIncluster()
+		clarkezoneLog.Successf("launching inside kubernetes cluster with cluster config")
+	} else {
+		c, err = kubelayer.GetConfigOutofCluster(internal.KubeConfigPath)
+		clarkezoneLog.Successf("launching from outside kubernetes cluster with config %v",
+			internal.KubeConfigPath)
+	}
+	return c, err
+}
+
 // runwebhookserverCmd represents the runwebhookserver command
 var runwebhookserverCmd *cobra.Command
 
 // PerformActions runs the webhook logic
 func PerformActions(provider providers, c *rest.Config, repo string, localRootDir string, initialBranch string,
-	preformInCluster bool, namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
+	namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
 	sourceDir := path.Join(localRootDir, "sourceroot")
 	fileinfo, res := os.Stat(sourceDir)
 	if fileinfo != nil && res == nil {
