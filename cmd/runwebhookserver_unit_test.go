@@ -39,32 +39,27 @@ func (p *webhooklistenmockprovider) webhookListen() {
 	p.Called()
 }
 
+func (*webhooklistenmockprovider) needInitialization() bool {
+	return false
+}
+
 func Test_CmdBase(t *testing.T) {
 	// TODO: mock ensure clone, render, webhook
 
 	m := &webhooklistenmockprovider{}
-	m.On("initialClone", "foo", "/tmp")
-	m.On("initialBuild")
+	m.On("initialClone", "http://foo", "main")
+	m.On("initialBuild", "testns")
 	m.On("webhookListen")
 
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
 		"--localdir", "/tmp", "--kubeconfigpath", internal.GetTestConfigPath(t), "--namespace", testNamespace})
 
-	b := bytes.NewBufferString("")
-	cmd.SetOut(b)
 	err := cmd.Execute()
 
 	m.AssertExpectations(t)
 	if err != nil {
 		t.Fatal(err)
-	}
-	out, err := ioutil.ReadAll(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(out) != "" {
-		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
 	}
 }
 

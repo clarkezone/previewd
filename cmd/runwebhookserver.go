@@ -36,6 +36,7 @@ type providers interface {
 	initialClone(string, string) error
 	initialBuild(string) error
 	webhookListen()
+	needInitialization() bool
 }
 
 type xxxProvider struct {
@@ -131,18 +132,22 @@ func PerformActions(provider providers, c *rest.Config, repo string, localRootDi
 	}
 
 	var err error
-	if webhooklisten || initialbuild {
-		jm, err = jobmanager.Newjobmanager(c, namespace, true)
+
+	// When running unit tests, don't initialize dependencies
+	if currentProvider.needInitialization() {
+		if webhooklisten || initialbuild {
+			jm, err = jobmanager.Newjobmanager(c, namespace, true)
+			if err != nil {
+				return err
+			}
+		}
+		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
 		if err != nil {
+			clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
 			return err
 		}
+		whl = webhooklistener.CreateWebhookListener(lrm)
 	}
-	lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
-	if err != nil {
-		clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
-		return err
-	}
-	whl = webhooklistener.CreateWebhookListener(lrm)
 
 	if initialclone {
 		err = currentProvider.initialClone(repo, initialBranch)
@@ -164,6 +169,10 @@ func PerformActions(provider providers, c *rest.Config, repo string, localRootDi
 		return err
 	}
 	return nil
+}
+
+func (xxxProvider) needInitialization() bool {
+	return true
 }
 
 func (xxxProvider) initialClone(repo string, initialBranch string) error {

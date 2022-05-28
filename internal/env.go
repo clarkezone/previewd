@@ -84,9 +84,9 @@ func init() {
 	viper.SetDefault(LogLevelVar, defaultLogLevel)
 	viper.SetDefault(KubeConfigPathVar, getDefaultKubeConfig())
 	viper.SetDefault(InitialBuildVar, true)
-	viper.SetDefault(InitialBuildVar, true)
+	viper.SetDefault(InitialCloneVar, true)
 	viper.SetDefault(WebhookListenVar, true)
-	viper.SetDefault(InitialBranch, initialBranchDefault)
+	viper.SetDefault(InitialBranchVar, initialBranchDefault)
 
 	Port = viper.GetInt(PortVar)
 	LogLevel = viper.GetString(LogLevelVar)
