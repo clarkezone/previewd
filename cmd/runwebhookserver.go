@@ -63,7 +63,8 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 				internal.Port, internal.TargetRepo, internal.LocalDir)
 			clarkezoneLog.Infof("runwebhookserver called")
 			p := xxxProvider{}
-			c, err := getConfig()
+
+			c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
 			if err != nil {
 				return err
 			}
@@ -102,7 +103,12 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 	return command
 }
 
-func getConfig() (*rest.Config, error) {
+func getConfig(ib bool, wl bool) (*rest.Config, error) {
+	// if not doing initial build and not webhook,
+	// don't get / load a kube config
+	if !ib && !wl {
+		return nil, nil
+	}
 	var c *rest.Config
 	var err error
 	if internal.KubeConfigPath == "" {

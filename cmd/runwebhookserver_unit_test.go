@@ -44,6 +44,7 @@ func (*webhooklistenmockprovider) needInitialization() bool {
 }
 
 func Test_CmdBase(t *testing.T) {
+	// TODO test localdir
 	m := &webhooklistenmockprovider{}
 	m.On("initialClone", "http://foo", "main")
 	m.On("initialBuild", "testns")
@@ -75,49 +76,18 @@ func Test_CmdBaseInClusterDefaultFail(t *testing.T) {
 	}
 }
 
-func Test_CmdBaseInClusterMissingNsFail(t *testing.T) {
-	m := &webhooklistenmockprovider{}
-	cmd := getRunWebhookServerCmd(m)
-	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", "/tmp"})
-
-	// TODO: should error out since missing namespace
-
-	b := bytes.NewBufferString("")
-	cmd.SetOut(b)
-	err := cmd.Execute()
-	if err != nil {
-		t.Fatal(err)
-	}
-	out, err := ioutil.ReadAll(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(out) != "" {
-		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
-	}
-}
-
 func Test_CmdCloneOnly(t *testing.T) {
 	// TODO: mock ensure no initial clone, no render, no webhook
 	m := &webhooklistenmockprovider{}
+	m.On("initialClone", "http://foo", "main")
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
 		"--localdir", "/tmp", "--initialclone", "true",
 		"--initialbuild", "false", "--webhooklisten", "false"})
 
-	b := bytes.NewBufferString("")
-	cmd.SetOut(b)
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatal(err)
-	}
-	out, err := ioutil.ReadAll(b)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(out) != "" {
-		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
 	}
 }
 
@@ -142,6 +112,10 @@ func Test_CmdInitialRenderHookListen(t *testing.T) {
 		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
 	}
 }
+
+// TODO: confirm no args error
+
+// TODO: what are minimal commandline args for this to work usefully?
 
 // GetTestConfig returns a local testing config for k8s
 func GetTestConfig(t *testing.T) *rest.Config {
