@@ -45,14 +45,16 @@ type xxxProvider struct {
 
 func getRunWebhookServerCmd(p providers) *cobra.Command {
 	currentProvider = p
+	// nolint
 	command := &cobra.Command{
 		// TODO: update documentation once flags stable
-		Use:   "runwebhookserver --targetrepo <target repo URL> --localdir <path to local dir>",
+		Use:   "runwebhookserver --targetrepo=<target repo URL> --localdir=<path to local dir>",
 		Short: "A brief description of your command",
 		Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
-previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
-./bin/previewd runwebhookserver --targetrepo test --localdir /tmp --initialclone=false --initialbuild=false --webhooklisten=false
+
+previewd runwebhookserver --targetrepo=http://repo.git --localdir=/tmp/foo
+previewd runwebhookserver --targetrepo=test --localdir=/tmp --initialclone=false --initialbuild=false --webhooklisten=false
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			err := internal.ValidateEnv()
