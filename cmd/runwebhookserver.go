@@ -25,11 +25,12 @@ import (
 )
 
 var (
-	lrm              *llrm.LocalRepoManager
-	jm               *jobmanager.Jobmanager
-	enableBranchMode bool
-	whl              *webhooklistener.WebhookListener
-	currentProvider  providers
+	lrm                 *llrm.LocalRepoManager
+	jm                  *jobmanager.Jobmanager
+	enableBranchMode    bool
+	whl                 *webhooklistener.WebhookListener
+	currentProvider     providers
+	runwebhookserverCmd *cobra.Command
 )
 
 type providers interface {
@@ -59,9 +60,13 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clarkezoneLog.Successf("RunE with port: %v TargetRepo:%v localdir:%v",
-				internal.Port, internal.TargetRepo, internal.LocalDir)
-			clarkezoneLog.Infof("runwebhookserver called")
+			previewserver := false
+
+			clarkezoneLog.Successf("runwebhookserver with port: %v TargetRepo:%v localdir:%v initialbranch:%v namespace:'%v'",
+				internal.Port, internal.TargetRepo, internal.LocalDir, internal.InitialBranch, internal.Namespace)
+			clarkezoneLog.Successf(" clone on run:%v build on run:%v start webhook server:%v start preview server:%v",
+				internal.InitialClone, internal.InitialBuild, internal.WebhookListen, previewserver)
+
 			p := xxxProvider{}
 
 			c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
@@ -75,32 +80,32 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 			return err
 		},
 	}
+
+	setupFlags(command)
+	return command
+}
+
+func setupFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVarP(&internal.TargetRepo, internal.TargetRepoVar, "t",
 		viper.GetString(internal.TargetRepoVar), "url to target repo to clone")
 
 	command.PersistentFlags().StringVarP(&internal.LocalDir, internal.LocalDirVar, "d",
 		viper.GetString(internal.LocalDirVar), "absolute path to local dir to clone into")
 
-	// Kubeconfig
 	command.PersistentFlags().StringVarP(&internal.KubeConfigPath, internal.KubeConfigPathVar, "k",
 		viper.GetString(internal.KubeConfigPathVar), "absolute path to a valid kubeconfig file")
 
-	// namespace
 	command.PersistentFlags().StringVarP(&internal.Namespace, internal.NamespaceVar, "n",
 		viper.GetString(internal.NamespaceVar), "Kube namespace for creating resources")
 
-	// initialclone
 	command.PersistentFlags().BoolVarP(&internal.InitialClone, internal.InitialCloneVar, "c",
 		viper.GetBool(internal.InitialCloneVar), "perform clone at startup")
 
-	// initialbuild
 	command.PersistentFlags().BoolVarP(&internal.InitialBuild, internal.InitialBuildVar, "b",
 		viper.GetBool(internal.InitialBuildVar), "perform build at startup")
 
-	// webhooklisten
-	command.PersistentFlags().BoolVarP(&internal.WebhookListen, internal.WebhookListenVar, "l",
+	command.PersistentFlags().BoolVarP(&internal.WebhookListen, internal.WebhookListenVar, "w",
 		viper.GetBool(internal.WebhookListenVar), "start webhook listener on startup")
-	return command
 }
 
 func getConfig(ib bool, wl bool) (*rest.Config, error) {
@@ -121,9 +126,6 @@ func getConfig(ib bool, wl bool) (*rest.Config, error) {
 	}
 	return c, err
 }
-
-// runwebhookserverCmd represents the runwebhookserver command
-var runwebhookserverCmd *cobra.Command
 
 // PerformActions runs the webhook logic
 func PerformActions(provider providers, c *rest.Config, repo string, localRootDir string, initialBranch string,
