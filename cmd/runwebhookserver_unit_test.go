@@ -7,9 +7,15 @@ import (
 
 	"github.com/clarkezone/previewd/internal"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
+	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/client-go/rest"
 )
+
+func init() {
+	clarkezoneLog.Init(logrus.DebugLevel)
+}
 
 const (
 	testNamespace = "testns"

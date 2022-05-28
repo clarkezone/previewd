@@ -84,11 +84,11 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 		viper.GetBool(internal.InitialCloneVar), "perform clone at startup")
 
 	// initialbuild
-	command.PersistentFlags().BoolVarP(&internal.InitialBuild, internal.InitialBuildVar, "d",
+	command.PersistentFlags().BoolVarP(&internal.InitialBuild, internal.InitialBuildVar, "b",
 		viper.GetBool(internal.InitialBuildVar), "perform build at startup")
 
 	// webhooklisten
-	command.PersistentFlags().BoolVarP(&internal.WebhookListen, internal.WebhookListenVar, "d",
+	command.PersistentFlags().BoolVarP(&internal.WebhookListen, internal.WebhookListenVar, "l",
 		viper.GetBool(internal.WebhookListenVar), "start webhook listener on startup")
 	return command
 }
