@@ -7,6 +7,7 @@ import (
 
 	"github.com/clarkezone/previewd/internal"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
+	"github.com/stretchr/testify/mock"
 	"k8s.io/client-go/rest"
 )
 
@@ -15,24 +16,31 @@ const (
 )
 
 type webhooklistenmockprovider struct {
+	mock.Mock
 }
 
-func (p webhooklistenmockprovider) initialClone(string, string) error {
+func (p *webhooklistenmockprovider) initialClone(a string, b string) error {
+	p.Called(a, b)
 	return nil
 }
 
-func (p webhooklistenmockprovider) initialBuild(string) error {
+func (p *webhooklistenmockprovider) initialBuild(a string) error {
+	p.Called(a)
 	return nil
 }
 
-func (p webhooklistenmockprovider) webhookListen() {
-
+func (p *webhooklistenmockprovider) webhookListen() {
+	p.Called()
 }
 
 func Test_CmdBase(t *testing.T) {
 	// TODO: mock ensure clone, render, webhook
 
 	m := &webhooklistenmockprovider{}
+	m.On("initialClone", "foo", "/tmp")
+	m.On("initialBuild")
+	m.On("webhookListen")
+
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
 		"--localdir", "/tmp", "--kubeconfig", internal.GetTestConfigPath(t), "--namespace", testNamespace})
@@ -53,12 +61,12 @@ func Test_CmdBase(t *testing.T) {
 }
 
 func Test_CmdBaseInClusterDefaultFail(t *testing.T) {
-	// TODO: mock ensure clone, render, webhook
-	// TODO: namespace manditory if render
 	m := &webhooklistenmockprovider{}
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", "/tmp"})
+		"--localdir", "/tmp", "--namespace", "testns"})
+
+	// TODO: should error out if detects not in cluster and no kubeclient string
 
 	b := bytes.NewBufferString("")
 	cmd.SetOut(b)
@@ -75,7 +83,28 @@ func Test_CmdBaseInClusterDefaultFail(t *testing.T) {
 	}
 }
 
-// TODO: test that when initialrender is on, there is a namespace parameter
+func Test_CmdBaseInClusterMissingNsFail(t *testing.T) {
+	m := &webhooklistenmockprovider{}
+	cmd := getRunWebhookServerCmd(m)
+	cmd.SetArgs([]string{"--targetrepo", "http://foo",
+		"--localdir", "/tmp"})
+
+	// TODO: should error out since missing namespace
+
+	b := bytes.NewBufferString("")
+	cmd.SetOut(b)
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := ioutil.ReadAll(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(out) != "" {
+		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
+	}
+}
 
 func Test_CmdCloneOnly(t *testing.T) {
 	// TODO: mock ensure no initial clone, no render, no webhook

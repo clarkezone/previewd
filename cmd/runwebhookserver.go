@@ -71,6 +71,25 @@ previewd runwebhookserver --targetrepo http://repo.git --localdir /tmp/foo
 	command.PersistentFlags().StringVarP(&internal.LocalDir, internal.LocalDirVar, "d",
 		viper.GetString(internal.LocalDirVar), "absolute path to local dir to clone into")
 
+	// Kubeconfig
+	command.PersistentFlags().StringVarP(&internal.KubeConfigPath, internal.KubeConfigPathVar, "k",
+		viper.GetString(internal.KubeConfigPathVar), "absolute path to a valid kubeconfig file")
+
+	// namespace
+	command.PersistentFlags().StringVarP(&internal.Namespace, internal.NamespaceVar, "n",
+		viper.GetString(internal.NamespaceVar), "Kube namespace for creating resources")
+
+	// initialclone
+	command.PersistentFlags().BoolVarP(&internal.InitialClone, internal.InitialCloneVar, "c",
+		viper.GetBool(internal.InitialCloneVar), "perform clone at startup")
+
+	// initialbuild
+	command.PersistentFlags().BoolVarP(&internal.InitialBuild, internal.InitialBuildVar, "d",
+		viper.GetBool(internal.InitialBuildVar), "perform build at startup")
+
+	// webhooklisten
+	command.PersistentFlags().BoolVarP(&internal.WebhookListen, internal.WebhookListenVar, "d",
+		viper.GetBool(internal.WebhookListenVar), "start webhook listener on startup")
 	return command
 }
 
