@@ -25,12 +25,10 @@ import (
 )
 
 var (
-	lrm                 *llrm.LocalRepoManager
-	jm                  *jobmanager.Jobmanager
-	enableBranchMode    bool
-	whl                 *webhooklistener.WebhookListener
-	currentProvider     providers
-	runwebhookserverCmd *cobra.Command
+	lrm              *llrm.LocalRepoManager
+	jm               *jobmanager.Jobmanager
+	enableBranchMode bool
+	whl              *webhooklistener.WebhookListener
 )
 
 type providers interface {
@@ -44,7 +42,6 @@ type xxxProvider struct {
 }
 
 func getRunWebhookServerCmd(p providers) *cobra.Command {
-	currentProvider = p
 	// nolint
 	command := &cobra.Command{
 		// TODO: update documentation once flags stable
@@ -71,14 +68,12 @@ previewd runwebhookserver --targetrepo=test --localdir=/tmp --initialclone=false
 			clarkezoneLog.Successf(" clone on run:%v, build on run:%v, start webhook server:%v, start preview server:%v",
 				internal.InitialClone, internal.InitialBuild, internal.WebhookListen, previewserver)
 
-			p := xxxProvider{}
-
 			c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
 			if err != nil {
 				return err
 			}
 
-			err = PerformActions(&p, c, internal.TargetRepo, internal.LocalDir,
+			err = PerformActions(p, c, internal.TargetRepo, internal.LocalDir,
 				internal.InitialBranch,
 				internal.Namespace, internal.WebhookListen, false, internal.InitialBuild, internal.InitialClone)
 			return err
@@ -169,7 +164,7 @@ func PerformActions(provider providers, c *rest.Config, repo string, localRootDi
 	var err error
 
 	// When running unit tests, don't initialize dependencies
-	if currentProvider.needInitialization() {
+	if provider.needInitialization() {
 		if webhooklisten || initialbuild {
 			jm, err = jobmanager.Newjobmanager(c, namespace, true)
 			if err != nil {
@@ -185,7 +180,7 @@ func PerformActions(provider providers, c *rest.Config, repo string, localRootDi
 	}
 
 	if initialclone {
-		err = currentProvider.initialClone(repo, initialBranch)
+		err = provider.initialClone(repo, initialBranch)
 		if err != nil {
 			clarkezoneLog.Debugf("initialClone failed %v", err)
 			return err
@@ -193,11 +188,11 @@ func PerformActions(provider providers, c *rest.Config, repo string, localRootDi
 	}
 
 	if webhooklisten {
-		currentProvider.webhookListen()
+		provider.webhookListen()
 	}
 
 	if initialbuild {
-		err = currentProvider.initialBuild(namespace)
+		err = provider.initialBuild(namespace)
 		if err != nil {
 			clarkezoneLog.Debugf("initialbuild failed: %v", err)
 		}
@@ -269,6 +264,6 @@ func (xxxProvider) initialBuild(namespace string) error {
 
 func init() {
 	p := &xxxProvider{}
-	runwebhookserverCmd = getRunWebhookServerCmd(p)
+	runwebhookserverCmd := getRunWebhookServerCmd(p)
 	rootCmd.AddCommand(runwebhookserverCmd)
 }

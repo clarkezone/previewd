@@ -9,8 +9,6 @@ package cmd
 import (
 	"testing"
 
-	"github.com/clarkezone/previewd/internal"
-	"github.com/clarkezone/previewd/pkg/jobmanager"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -46,25 +44,25 @@ func TestSetupEnvironment(t *testing.T) {
 }
 
 func TestPerformActions(t *testing.T) {
-	// TODO: create test namespace
-	jm, err := jobmanager.Newjobmanager(GetTestConfig(t), testNamespace, false)
-	if err != nil {
-		t.Errorf("job manager create failed")
-	}
-	//	err = jm.KubeSession().CreateNamespace(testNamespace)
-	//	if err != nil {
-	//		t.Fatalf("unable to create namespace %v", err)
-	//	}
-	createVolumes(err, jm.KubeSession(), t)
-
-	repo, localdir, _, _, _ := internal.Getenv(t)
-	c := GetTestConfig(t)
-	err = PerformActions(currentProvider, c, repo, localdir, "main", "testns", false, false, true, true)
-	if err != nil {
-		t.Fatalf("Performactions failed %v", err)
-	}
-
-	// TODO: call post to webhook to trigger job
+	// 	// TODO: create test namespace
+	// 	jm, err := jobmanager.Newjobmanager(GetTestConfig(t), testNamespace, false)
+	// 	if err != nil {
+	// 		t.Errorf("job manager create failed")
+	// 	}
+	// 	//	err = jm.KubeSession().CreateNamespace(testNamespace)
+	// 	//	if err != nil {
+	// 	//		t.Fatalf("unable to create namespace %v", err)
+	// 	//	}
+	// 	createVolumes(err, jm.KubeSession(), t)
+	//
+	// 	repo, localdir, _, _, _ := internal.Getenv(t)
+	// 	c := GetTestConfig(t)
+	// 	err = PerformActions(currentProvider, c, repo, localdir, "main", "testns", false, false, true, true)
+	// 	if err != nil {
+	// 		t.Fatalf("Performactions failed %v", err)
+	// 	}
+	//
+	// 	// TODO: call post to webhook to trigger job
 }
 
 func createVolumes(err error, jm *kubelayer.KubeSession, t *testing.T) (string, string) {
