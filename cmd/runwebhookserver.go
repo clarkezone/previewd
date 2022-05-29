@@ -7,7 +7,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"runtime"
@@ -149,6 +148,11 @@ func getConfig(ib bool, wl bool) (*rest.Config, error) {
 func PerformActions(provider providers, repo string, localRootDir string, initialBranch string,
 	namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
 	sourceDir := path.Join(localRootDir, "sourceroot")
+	clarkezoneLog.Debugf("PerformActions() with providers:%v, repo:%v, localRootDir:%v, initialBranch:%v,",
+		provider, repo, localRootDir, initialBranch)
+	clarkezoneLog.Debugf(" namespace:%v, webhooklisten:%v, serve:%v, initialBuild:%v, initialClone:%v",
+		namespace, webhooklisten, serve, initialbuild, initialclone)
+
 	fileinfo, res := os.Stat(sourceDir)
 	if fileinfo != nil && res == nil {
 		err := os.RemoveAll(sourceDir)
@@ -188,10 +192,12 @@ func PerformActions(provider providers, repo string, localRootDir string, initia
 	}
 
 	if webhooklisten {
+		clarkezoneLog.Debugf("PerformActions() start webhookListen on provider")
 		provider.webhookListen()
 	}
 
 	if initialbuild {
+		clarkezoneLog.Debugf("PerformActions() initialBuild with namespace %v")
 		err = provider.initialBuild(namespace)
 		if err != nil {
 			clarkezoneLog.Debugf("initialbuild failed: %v", err)
@@ -222,25 +228,26 @@ func (xxxProvider) webhookListen() {
 }
 
 func (xxxProvider) initialBuild(namespace string) error {
+	clarkezoneLog.Debugf("initialbuild() with namespace %v", namespace)
 	const rendername = "render"
 	const sourcename = "source"
 	render, err := jm.KubeSession().FindpvClaimByName(rendername, namespace)
 	if err != nil {
-		clarkezoneLog.Errorf("can't find pvcalim render %v", err)
+		clarkezoneLog.Errorf("initialBuild() can't find pvcalim render %v", err)
 		return err
 	}
 	if render == "" {
-		clarkezoneLog.Errorf("render name empty")
-		return fmt.Errorf("render name empty")
+		clarkezoneLog.Errorf("initialBuild() render name empty")
+		return fmt.Errorf("initialBuild() render name empty")
 	}
 	source, err := jm.KubeSession().FindpvClaimByName(sourcename, namespace)
 	if err != nil {
-		clarkezoneLog.Errorf("can't find pvcalim source %v", err)
+		clarkezoneLog.Errorf("initialBuild() can't find pvcalim source %v", err)
 		return err
 	}
 	if source == "" {
-		clarkezoneLog.Errorf("source name empty")
-		return fmt.Errorf("source name empty")
+		clarkezoneLog.Errorf("initialBuild() source name empty")
+		return fmt.Errorf("initialBuild() source name empty")
 	}
 	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
 	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", true)
@@ -254,10 +261,12 @@ func (xxxProvider) initialBuild(namespace string) error {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
+	clarkezoneLog.Debugf("initialBuild() submitting job namespace:%v, imagePath:%v, command:%v, pararms:%v, refs:%v",
+		namespace, imagePath, command, params, refs)
 	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
 		params, refs)
 	if err != nil {
-		log.Printf("Failed to create job: %v\n", err.Error())
+		clarkezoneLog.Errorf("Failed to create job: %v", err.Error())
 	}
 	return nil
 }

@@ -34,8 +34,8 @@ func createJobForClone(t *testing.T, ks *kubelayer.KubeSession) {
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
 	cmd := []string{"./previewd"}
-	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=true",
-		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
+	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=false",
+		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
 	_, err := ks.CreateJob("populatepv", "testns", imagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
