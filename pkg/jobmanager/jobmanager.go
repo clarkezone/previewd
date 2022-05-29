@@ -89,12 +89,13 @@ func (o *kubeJobManager) InProgress() bool {
 
 // Newjobmanager is a factory method to create a new instanace of a job manager
 func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*Jobmanager, error) {
-	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config, namespace)
+	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v, startwatchers:%v",
+		config, namespace, startwatchers)
 	if config == nil {
 		return nil, fmt.Errorf("config supplied is nil")
 	}
 	kubeProvider := kubeJobManager{}
-	jm, err := newjobmanagerinternal(config, &kubeProvider)
+	jm, err := newjobmanagerinternal(config, &kubeProvider, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool) (*
 	return jm, nil
 }
 
-func newjobmanagerinternal(config *rest.Config, provider jobxxx) (*Jobmanager, error) {
+func newjobmanagerinternal(config *rest.Config, provider jobxxx, namespace string) (*Jobmanager, error) {
 	if config != nil {
 		clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
 	} else {
@@ -128,6 +129,7 @@ func newjobmanagerinternal(config *rest.Config, provider jobxxx) (*Jobmanager, e
 
 	jm.addQueue = make(chan jobdescriptor)
 	jm.jobProvider = provider
+	jm.namespace = namespace
 	return &jm, nil
 }
 
@@ -139,7 +141,7 @@ func (jm *Jobmanager) KubeSession() *kubelayer.KubeSession {
 
 // StartWatchers starts jobmonitoring infra for cases when these were not started in jobmanager creation
 func (jm *Jobmanager) StartWatchers() error {
-	clarkezoneLog.Debugf("Starting watchers")
+	clarkezoneLog.Debugf("JobManager: Starting watchers with namespace %v", jm.namespace)
 	err := jm.kubeSession.StartWatchers(jm.namespace)
 
 	if err != nil {
