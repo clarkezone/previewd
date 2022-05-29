@@ -35,7 +35,7 @@ func GetKubeSession(t *testing.T) *KubeSession {
 	if err != nil {
 		t.Fatalf("failed to get kubesession %v", err)
 	}
-	err = ks.StartWatchers(testNamespace)
+	err = ks.StartWatchers(testNamespace, true)
 	if err != nil {
 		t.Fatalf("failed to start watchers %v", err)
 	}

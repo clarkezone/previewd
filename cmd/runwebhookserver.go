@@ -166,7 +166,7 @@ func PerformActions(provider providers, repo string, localRootDir string, initia
 			return err
 		}
 		if webhooklisten || initialbuild {
-			jm, err = jobmanager.Newjobmanager(c, namespace, true)
+			jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
 			if err != nil {
 				return err
 			}

@@ -127,7 +127,7 @@ func (ks *KubeSession) DeleteJob(name string, namespace string) error {
 }
 
 // StartWatchers starts a goroutine that causes notifications to fire
-func (ks *KubeSession) StartWatchers(namespace string) error {
+func (ks *KubeSession) StartWatchers(namespace string, enablenamespacewatcher bool) error {
 	clarkezoneLog.Debugf("Kubesession: startWatchers called with namesapce:%v", namespace)
 	// We will create an informer that writes added pods to a channel.
 	var info informers.SharedInformerFactory
@@ -153,8 +153,11 @@ func (ks *KubeSession) StartWatchers(namespace string) error {
 	jobInformer := info.Batch().V1().Jobs().Informer()
 	jobInformer.AddEventHandler(ks.getJobEventHandlers())
 
-	namespaceInformer := info.Core().V1().Namespaces().Informer()
-	namespaceInformer.AddEventHandler(ks.getNamespaceHandlers())
+	var namespaceInformer cache.SharedIndexInformer
+	if enablenamespacewatcher {
+		namespaceInformer = info.Core().V1().Namespaces().Informer()
+		namespaceInformer.AddEventHandler(ks.getNamespaceHandlers())
+	}
 
 	// Handle errors
 	err := jobInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
@@ -173,7 +176,10 @@ func (ks *KubeSession) StartWatchers(namespace string) error {
 	// we send any events to it.
 	result := cache.WaitForCacheSync(ks.ctx.Done(), podInformer.HasSynced)
 	result2 := cache.WaitForCacheSync(ks.ctx.Done(), jobInformer.HasSynced)
-	result3 := cache.WaitForCacheSync(ks.ctx.Done(), namespaceInformer.HasSynced)
+	var result3 bool
+	if enablenamespacewatcher {
+		result3 = cache.WaitForCacheSync(ks.ctx.Done(), namespaceInformer.HasSynced)
+	}
 	if !result || !result2 || !result3 {
 		err := fmt.Errorf(" kubesession: waitforcachesync failed")
 		clarkezoneLog.Errorf(" kubesession: startWatchers: failed: %v", err)

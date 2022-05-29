@@ -75,7 +75,7 @@ func TestCreateJobE2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't get config %v", err)
 	}
-	jm, err := Newjobmanager(config, "testns", false)
+	jm, err := Newjobmanager(config, "testns", false, true)
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
@@ -84,7 +84,7 @@ func TestCreateJobE2E(t *testing.T) {
 	jm.jobProvider = wrappedProvider
 
 	// Watchers must be started after the provider has been wrapped
-	jm.StartWatchers()
+	jm.StartWatchers(true)
 	err = jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
 		[]kubelayer.PVClaimMountRef{})
 	if err != nil {
