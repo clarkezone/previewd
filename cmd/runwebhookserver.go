@@ -12,6 +12,7 @@ import (
 	"path"
 	"runtime"
 
+	"github.com/clarkezone/previewd/pkg/config"
 	"github.com/clarkezone/previewd/pkg/jobmanager"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
 	llrm "github.com/clarkezone/previewd/pkg/localrepomanager"
@@ -62,7 +63,7 @@ previewd runwebhookserver --targetrepo=test --localdir=/tmp --initialclone=false
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			previewserver := false
-
+			clarkezoneLog.Infof("previewd version:%s hash:%s\n", config.VersionString, config.VersionHash)
 			clarkezoneLog.Successf("runwebhookserver with port: %v, TargetRepo:%v, localdir:%v, initialbranch:%v, namespace:'%v'",
 				internal.Port, internal.TargetRepo, internal.LocalDir, internal.InitialBranch, internal.Namespace)
 			clarkezoneLog.Successf(" clone on run:%v, build on run:%v, start webhook server:%v, start preview server:%v",
