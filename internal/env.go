@@ -42,8 +42,7 @@ const (
 	WebhookListenVar = "webhooklisten"
 
 	// InitialBranchVar is the name environment variable for the webhook listen flag
-	InitialBranchVar     = "initialbranch"
-	initialBranchDefault = "main"
+	InitialBranchVar = "initialbranch"
 )
 
 var (
