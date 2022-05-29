@@ -14,29 +14,66 @@ import (
 )
 
 func PrepareEnvironment(t *testing.T) {
-	ks, err := kubelayer.Newkubesession(GetTestConfig(t))
-	if err != nil {
-		t.Fatalf("Unable to create kubesession %v", err)
-	}
+	ks := getKubeSession(t)
 	wait := make(chan bool)
 	ks.CreateNamespace("testns", func(ns *corev1.Namespace, rt kubelayer.ResourseStateType) {
 		if rt == kubelayer.Create {
 			wait <- true
 		}
 	})
-	source, render := createVolumes(err, ks, t)
+	_, _ = createVolumes(ks, t)
 
+}
+
+func createJobForClone(t *testing.T, ks *kubelayer.KubeSession) {
+	const render = "render"
+	const source = "source"
 	// create job to launch clone only previewd with persistent volumes bound
-	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
-	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", true)
+	renderref := ks.CreatePvCMountReference(render, "/site", false)
+	srcref := ks.CreatePvCMountReference(source, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	// TODO: fix image path
-	imagePath := "registry.hub.docker.com/clarkezone/jekyllbuilder:0.0.1.8"
-	// TODO: verify entrypoint
-	cmd := []string{"previewd"}
-	// TODO: ensure initialclone implemented
-	args := []string{" --initialclone true"}
-	ks.CreateJob("populatepv", "testns", imagePath, cmd, args, nil, false, refs)
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	cmd := []string{"./previewd"}
+	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=true",
+		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
+	_, err := ks.CreateJob("populatepv", "testns", imagePath, cmd, args, nil, false, refs)
+	if err != nil {
+		t.Fatalf("create job failed: %v", err)
+	}
+}
+
+func createJobForTestServer(t *testing.T, ks *kubelayer.KubeSession) {
+	const render = "render"
+	const source = "source"
+	// create job to launch clone only previewd with persistent volumes bound
+	renderref := ks.CreatePvCMountReference(render, "/site", false)
+	srcref := ks.CreatePvCMountReference(source, "/src", true)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	cmd := []string{"./previewd"}
+	args := []string{"testserver"}
+	_, err := ks.CreateJob("testserver", "testns", imagePath, cmd, args, nil, false, refs)
+	if err != nil {
+		t.Fatalf("create job failed: %v", err)
+	}
+}
+
+func TestCreateJobForClone(t *testing.T) {
+	ks := getKubeSession(t)
+	createJobForClone(t, ks)
+}
+
+func TestCreateJobTestServer(t *testing.T) {
+	ks := getKubeSession(t)
+	createJobForTestServer(t, ks)
+}
+
+func getKubeSession(t *testing.T) *kubelayer.KubeSession {
+	ks, err := kubelayer.Newkubesession(GetTestConfig(t))
+	if err != nil {
+		t.Fatalf("Unable to create kubesession %v", err)
+	}
+	return ks
 }
 
 func TestSetupEnvironment(t *testing.T) {
@@ -65,11 +102,11 @@ func TestPerformActions(t *testing.T) {
 	// 	// TODO: call post to webhook to trigger job
 }
 
-func createVolumes(err error, jm *kubelayer.KubeSession, t *testing.T) (string, string) {
+func createVolumes(jm *kubelayer.KubeSession, t *testing.T) (string, string) {
 	const rendername = "render"
 	const sourcename = "source"
 
-	err = jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
+	err := jm.CreatePersistentVolumeClaim(sourcename, testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
