@@ -176,7 +176,7 @@ func (ks *KubeSession) StartWatchers(namespace string, enablenamespacewatcher bo
 	// we send any events to it.
 	result := cache.WaitForCacheSync(ks.ctx.Done(), podInformer.HasSynced)
 	result2 := cache.WaitForCacheSync(ks.ctx.Done(), jobInformer.HasSynced)
-	var result3 bool
+	result3 := true
 	if enablenamespacewatcher {
 		result3 = cache.WaitForCacheSync(ks.ctx.Done(), namespaceInformer.HasSynced)
 	}
