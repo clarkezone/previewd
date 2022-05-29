@@ -10,6 +10,8 @@
 //"go.testTags": "-tags=unit,integration"
 // }
 
+// TODO: add test for not starting namespace watcher
+
 package kubelayer
 
 import (
