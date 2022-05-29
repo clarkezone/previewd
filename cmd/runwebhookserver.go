@@ -35,6 +35,7 @@ type providers interface {
 	initialClone(string, string) error
 	initialBuild(string) error
 	webhookListen()
+	WaitForInterupt() error
 	needInitialization() bool
 }
 
@@ -144,6 +145,7 @@ func getConfig(ib bool, wl bool) (*rest.Config, error) {
 	return c, err
 }
 
+//nolint
 // PerformActions runs the webhook logic
 func PerformActions(provider providers, repo string, localRootDir string, initialBranch string,
 	namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
@@ -197,13 +199,21 @@ func PerformActions(provider providers, repo string, localRootDir string, initia
 	}
 
 	if initialbuild {
-		clarkezoneLog.Debugf("PerformActions() initialBuild with namespace %v")
+		clarkezoneLog.Debugf("PerformActions() initialBuild with namespace %v", namespace)
 		err = provider.initialBuild(namespace)
 		if err != nil {
 			clarkezoneLog.Debugf("initialbuild failed: %v", err)
 		}
 		return err
 	}
+
+	if webhooklisten {
+		err = provider.WaitForInterupt()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -225,6 +235,10 @@ func (xxxProvider) initialClone(repo string, initialBranch string) error {
 
 func (xxxProvider) webhookListen() {
 	whl.StartListen("")
+}
+
+func (xxxProvider) WaitForInterupt() error {
+	return whl.WaitForInterupt()
 }
 
 func (xxxProvider) initialBuild(namespace string) error {

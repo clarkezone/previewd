@@ -44,6 +44,12 @@ func (wl *WebhookListener) StartListen(secret string) {
 	wl.basicServer.StartListen(secret, wrappedMux)
 }
 
+// WaitForInterupt waits for user to ctrl c to exit
+func (wl *WebhookListener) WaitForInterupt() error {
+	clarkezoneLog.Infof("Waiting for user to interrupt")
+	return wl.basicServer.WaitforInterupt()
+}
+
 func (wl *WebhookListener) getHandler() func(w http.ResponseWriter, r *http.Request) {
 	responsewriter := func(w http.ResponseWriter, r *http.Request) {
 		wl.hookserver.ServeHTTP(w, r)

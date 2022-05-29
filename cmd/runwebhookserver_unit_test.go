@@ -40,6 +40,12 @@ func (p *webhooklistenmockprovider) webhookListen() {
 	p.Called()
 }
 
+func (p *webhooklistenmockprovider) WaitForInterupt() error {
+	clarkezoneLog.Debugf("waitForInterupt")
+	p.Called()
+	return nil
+}
+
 func (*webhooklistenmockprovider) needInitialization() bool {
 	return false
 }
