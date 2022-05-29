@@ -68,12 +68,7 @@ previewd runwebhookserver --targetrepo=test --localdir=/tmp --initialclone=false
 			clarkezoneLog.Successf(" clone on run:%v, build on run:%v, start webhook server:%v, start preview server:%v",
 				internal.InitialClone, internal.InitialBuild, internal.WebhookListen, previewserver)
 
-			c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
-			if err != nil {
-				return err
-			}
-
-			err = PerformActions(p, c, internal.TargetRepo, internal.LocalDir,
+			err := PerformActions(p, internal.TargetRepo, internal.LocalDir,
 				internal.InitialBranch,
 				internal.Namespace, internal.WebhookListen, false, internal.InitialBuild, internal.InitialClone)
 			return err
@@ -150,7 +145,7 @@ func getConfig(ib bool, wl bool) (*rest.Config, error) {
 }
 
 // PerformActions runs the webhook logic
-func PerformActions(provider providers, c *rest.Config, repo string, localRootDir string, initialBranch string,
+func PerformActions(provider providers, repo string, localRootDir string, initialBranch string,
 	namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
 	sourceDir := path.Join(localRootDir, "sourceroot")
 	fileinfo, res := os.Stat(sourceDir)
@@ -165,6 +160,10 @@ func PerformActions(provider providers, c *rest.Config, repo string, localRootDi
 
 	// When running unit tests, don't initialize dependencies
 	if provider.needInitialization() {
+		c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
+		if err != nil {
+			return err
+		}
 		if webhooklisten || initialbuild {
 			jm, err = jobmanager.Newjobmanager(c, namespace, true)
 			if err != nil {
