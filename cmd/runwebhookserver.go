@@ -35,7 +35,7 @@ type providers interface {
 	initialClone(string, string) error
 	initialBuild(string) error
 	webhookListen()
-	WaitForInterupt() error
+	waitForInterupt() error
 	needInitialization() bool
 }
 
@@ -145,7 +145,6 @@ func getConfig(ib bool, wl bool) (*rest.Config, error) {
 	return c, err
 }
 
-//nolint
 // PerformActions runs the webhook logic
 func PerformActions(provider providers, repo string, localRootDir string, initialBranch string,
 	namespace string, webhooklisten bool, serve bool, initialbuild bool, initialclone bool) error {
@@ -166,23 +165,9 @@ func PerformActions(provider providers, repo string, localRootDir string, initia
 	var err error
 
 	// When running unit tests, don't initialize dependencies
-	if provider.needInitialization() {
-		c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
-		if err != nil {
-			return err
-		}
-		if webhooklisten || initialbuild {
-			jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
-			if err != nil {
-				return err
-			}
-		}
-		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
-		if err != nil {
-			clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
-			return err
-		}
-		whl = webhooklistener.CreateWebhookListener(lrm)
+	err = intitializeDependencies(provider, webhooklisten, initialbuild, namespace, localRootDir)
+	if err != nil {
+		return err
 	}
 
 	if initialclone {
@@ -203,17 +188,41 @@ func PerformActions(provider providers, repo string, localRootDir string, initia
 		err = provider.initialBuild(namespace)
 		if err != nil {
 			clarkezoneLog.Debugf("initialbuild failed: %v", err)
+			return err
 		}
-		return err
 	}
 
 	if webhooklisten {
-		err = provider.WaitForInterupt()
+		clarkezoneLog.Debugf("PerformActions() calling waitforinterupt on provider")
+		err = provider.waitForInterupt()
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func intitializeDependencies(provider providers, webhooklisten bool, initialbuild bool,
+	namespace string, localRootDir string) error {
+	if provider.needInitialization() {
+		c, err := getConfig(internal.InitialBuild, internal.WebhookListen)
+		if err != nil {
+			return err
+		}
+		if webhooklisten || initialbuild {
+			jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
+			if err != nil {
+				return err
+			}
+		}
+		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
+		if err != nil {
+			clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
+			return err
+		}
+		whl = webhooklistener.CreateWebhookListener(lrm)
+	}
 	return nil
 }
 
@@ -237,7 +246,7 @@ func (xxxProvider) webhookListen() {
 	whl.StartListen("")
 }
 
-func (xxxProvider) WaitForInterupt() error {
+func (xxxProvider) waitForInterupt() error {
 	return whl.WaitForInterupt()
 }
 

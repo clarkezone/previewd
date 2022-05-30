@@ -40,7 +40,7 @@ func (p *webhooklistenmockprovider) webhookListen() {
 	p.Called()
 }
 
-func (p *webhooklistenmockprovider) WaitForInterupt() error {
+func (p *webhooklistenmockprovider) waitForInterupt() error {
 	clarkezoneLog.Debugf("waitForInterupt")
 	p.Called()
 	return nil
@@ -56,6 +56,7 @@ func Test_CmdBase(t *testing.T) {
 	m.On("initialClone", "http://foo", "").Return(nil)
 	m.On("initialBuild", "").Return(nil)
 	m.On("webhookListen").Return()
+	m.On("waitForInterupt").Return()
 
 	cmd := getRunWebhookServerCmd(m)
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
@@ -75,6 +76,7 @@ func Test_CmdInitialRenderHookListen(t *testing.T) {
 	mo := new(webhooklistenmockprovider)
 	mo.On("initialBuild", "").Return(nil)
 	mo.On("webhookListen")
+	mo.On("waitForInterupt").Return()
 	cmd := getRunWebhookServerCmd(mo)
 	cmd.SetArgs([]string{"--targetrepo=http://bar",
 		"--localdir=/tmp", "--initialclone=false"})
