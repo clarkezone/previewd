@@ -35,7 +35,7 @@ func Test_ExecuteVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(out) != "rk version:1 hash:A\n" {
+	if string(out) != "previewd version:1 hash:A\n" {
 		t.Fatalf("expected \"%s\" got \"%s\"", "hi", string(out))
 	}
 }

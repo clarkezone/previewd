@@ -118,7 +118,7 @@ func newMockJobManager() *MockJobManager {
 
 func getJobManagerMockedMonitor(t *testing.T) (*Jobmanager, *MockJobManager) {
 	mjm := newMockJobManager()
-	jm, err := newjobmanagerinternal(nil, mjm)
+	jm, err := newjobmanagerinternal(nil, mjm, testNamespace)
 	if err != nil {
 		t.Fatalf("unable to create jobmanager")
 	}
@@ -134,6 +134,7 @@ func TestStartMonitor(t *testing.T) {
 
 func TestSingleJobSucess(t *testing.T) {
 	jm, mjm := getJobManagerMockedMonitor(t)
+
 	mjm.On("CreateJob", "alpinetest", "testns",
 		"alpine", mock.AnythingOfType("[]string"), mock.AnythingOfType("[]string"),
 		mock.AnythingOfType("kubelayer.JobNotifier"), false,

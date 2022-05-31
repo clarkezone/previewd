@@ -29,7 +29,7 @@ func getVersionCommand() *cobra.Command {
 		Use:   "version",
 		Short: "Show previewd version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, err := fmt.Fprintf(cmd.OutOrStdout(), "rk version:%s hash:%s\n", config.VersionString, config.VersionHash)
+			_, err := fmt.Fprintf(cmd.OutOrStdout(), "previewd version:%s hash:%s\n", config.VersionString, config.VersionHash)
 			if err != nil {
 				return err
 			}

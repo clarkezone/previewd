@@ -10,6 +10,8 @@
 //"go.testTags": "-tags=unit,integration"
 // }
 
+// TODO: add test for not starting namespace watcher
+
 package kubelayer
 
 import (
@@ -35,7 +37,7 @@ func GetKubeSession(t *testing.T) *KubeSession {
 	if err != nil {
 		t.Fatalf("failed to get kubesession %v", err)
 	}
-	err = ks.StartWatchers(testNamespace)
+	err = ks.StartWatchers(testNamespace, true)
 	if err != nil {
 		t.Fatalf("failed to start watchers %v", err)
 	}

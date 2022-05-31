@@ -46,7 +46,7 @@ type KubeSession struct {
 
 // Newkubesession creates a new kubesession from a config
 func Newkubesession(config *rest.Config) (*KubeSession, error) {
-	clarkezoneLog.Debugf("Newjobmanager called with incluster:%v, namespace:%v", config)
+	clarkezoneLog.Debugf("KubeSession: Newkubesession() called with incluster:%v, namespace:%v", config)
 	if config == nil {
 		return nil, fmt.Errorf("config supplied is nil")
 	}
@@ -69,14 +69,14 @@ func Newkubesession(config *rest.Config) (*KubeSession, error) {
 
 // CreatePersistentVolumeClaim creates a new persistentvolumeclaim
 func (ks *KubeSession) CreatePersistentVolumeClaim(name string, namespace string) error {
-	clarkezoneLog.Debugf("CreateVolume() called with name:%v namespace:%v", name, namespace)
+	clarkezoneLog.Debugf("KubeSession: CreateVolume() called with name:%v namespace:%v", name, namespace)
 	_, err := CreatePersistentVolumeClaim(ks.currentClientset, name, namespace)
 	return err
 }
 
 // CreateNamespace creates a new namespace
 func (ks *KubeSession) CreateNamespace(namespace string, notifier NamespaceNotifier) error {
-	clarkezoneLog.Debugf("CreateNamespace() called with namespace:%v", namespace)
+	clarkezoneLog.Debugf("KubeSession: CreateNamespace() called with namespace:%v", namespace)
 	if notifier != nil {
 		ks.namespacenotifiers[namespace] = notifier
 	}
@@ -86,14 +86,14 @@ func (ks *KubeSession) CreateNamespace(namespace string, notifier NamespaceNotif
 
 // GetNamespace creates a new namespace
 func (ks *KubeSession) GetNamespace(namespace string) (*corev1.Namespace, error) {
-	clarkezoneLog.Debugf("GetNamespace() called with namespace:%v", namespace)
+	clarkezoneLog.Debugf("KubeSession: GetNamespace() called with namespace:%v", namespace)
 	ns, err := GetNamespace(ks.currentClientset, namespace)
 	return ns, err
 }
 
 // DeleteNamespace deletes a namespace
 func (ks *KubeSession) DeleteNamespace(namespace string, notifier NamespaceNotifier) error {
-	clarkezoneLog.Debugf("DeleteNamespace() called with namespace:%v", namespace)
+	clarkezoneLog.Debugf("KubeSession: DeleteNamespace() called with namespace:%v", namespace)
 	if notifier != nil {
 		ks.namespacenotifiers[namespace] = notifier
 	}
@@ -105,7 +105,7 @@ func (ks *KubeSession) DeleteNamespace(namespace string, notifier NamespaceNotif
 func (ks *KubeSession) CreateJob(name string, namespace string,
 	image string, command []string, args []string, notifier JobNotifier,
 	autoDelete bool, mountlist []PVClaimMountRef) (*batchv1.Job, error) {
-	clarkezoneLog.Debugf("CreateJob() called with name %v, namespace:%v,"+
+	clarkezoneLog.Debugf("KubeSession: CreateJob() called with name %v, namespace:%v,"+
 		"image:%v, command:%v, args:%v, notifier:%v, autodelete:%v, pvlist:%v",
 		name, namespace, image, command, args, notifier, autoDelete, mountlist)
 	// TODO: if job exists, delete it
@@ -122,13 +122,13 @@ func (ks *KubeSession) CreateJob(name string, namespace string,
 
 // DeleteJob deletes a job
 func (ks *KubeSession) DeleteJob(name string, namespace string) error {
-	clarkezoneLog.Debugf("DeleteJob() called with name:%v namespace:%v", name, namespace)
+	clarkezoneLog.Debugf("KubeSession: DeleteJob() called with name:%v namespace:%v", name, namespace)
 	return DeleteJob(ks.currentClientset, name, namespace)
 }
 
 // StartWatchers starts a goroutine that causes notifications to fire
-func (ks *KubeSession) StartWatchers(namespace string) error {
-	clarkezoneLog.Debugf("startWatchers called with incluster:%v", namespace)
+func (ks *KubeSession) StartWatchers(namespace string, enablenamespacewatcher bool) error {
+	clarkezoneLog.Debugf("Kubesession: startWatchers called with namesapce:%v", namespace)
 	// We will create an informer that writes added pods to a channel.
 	var info informers.SharedInformerFactory
 	if namespace == "" {
@@ -153,16 +153,19 @@ func (ks *KubeSession) StartWatchers(namespace string) error {
 	jobInformer := info.Batch().V1().Jobs().Informer()
 	jobInformer.AddEventHandler(ks.getJobEventHandlers())
 
-	namespaceInformer := info.Core().V1().Namespaces().Informer()
-	namespaceInformer.AddEventHandler(ks.getNamespaceHandlers())
+	var namespaceInformer cache.SharedIndexInformer
+	if enablenamespacewatcher {
+		namespaceInformer = info.Core().V1().Namespaces().Informer()
+		namespaceInformer.AddEventHandler(ks.getNamespaceHandlers())
+	}
 
 	// Handle errors
 	err := jobInformer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
-		clarkezoneLog.Errorf(" StartWatchers() watcher errorhandler caught error: %v", err.Error())
+		clarkezoneLog.Errorf(" KubeSession: StartWatchers() watcher errorhandler caught error: %v", err.Error())
 		ks.cancel()
 	})
 	if err != nil {
-		clarkezoneLog.Errorf(" StartWatchers() Unable to set watcher error handler with %v, aborting", err)
+		clarkezoneLog.Errorf(" KubeSession: StartWatchers() Unable to set watcher error handler with %v, aborting", err)
 		return err
 	}
 
@@ -173,10 +176,13 @@ func (ks *KubeSession) StartWatchers(namespace string) error {
 	// we send any events to it.
 	result := cache.WaitForCacheSync(ks.ctx.Done(), podInformer.HasSynced)
 	result2 := cache.WaitForCacheSync(ks.ctx.Done(), jobInformer.HasSynced)
-	result3 := cache.WaitForCacheSync(ks.ctx.Done(), namespaceInformer.HasSynced)
+	result3 := true
+	if enablenamespacewatcher {
+		result3 = cache.WaitForCacheSync(ks.ctx.Done(), namespaceInformer.HasSynced)
+	}
 	if !result || !result2 || !result3 {
-		err := fmt.Errorf("waitforcachesync failed")
-		clarkezoneLog.Errorf(" StartWatchers: failed: %v", err)
+		err := fmt.Errorf(" kubesession: waitforcachesync failed")
+		clarkezoneLog.Errorf(" kubesession: startWatchers: failed: %v", err)
 		return err
 	}
 	return nil
@@ -247,26 +253,26 @@ func (ks *KubeSession) CreatePvCMountReference(claimname string,
 
 // GetConfigIncluster returns a config that will work when caller is running in a k8s cluster
 func GetConfigIncluster() (*rest.Config, error) {
-	clarkezoneLog.Debugf("GetConfigIncluster() called with incluster")
+	clarkezoneLog.Debugf("Kubesession: GetConfigIncluster() called with incluster")
 	var config *rest.Config
 	var err error
 	config, err = rest.InClusterConfig()
 	if err != nil {
-		clarkezoneLog.Errorf("InClusterConfig() returned error %v", err)
+		clarkezoneLog.Errorf("Kubesession: InClusterConfig() returned error %v", err)
 	}
 	return config, err
 }
 
 // GetConfigOutofCluster returns a config loaded from the supplied path
 func GetConfigOutofCluster(kubepath string) (*rest.Config, error) {
-	clarkezoneLog.Debugf("GetConfigOutofCluster() called with kubepath:%v", kubepath)
+	clarkezoneLog.Debugf("Kubesession: GetConfigOutofCluster() called with kubepath:%v", kubepath)
 	var config *rest.Config
 	var err error
 	var kubeconfig = &kubepath
 	// use the current context in kubeconfig
 	config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		clarkezoneLog.Errorf("BuildConfigFromFlags() failed with %v", err)
+		clarkezoneLog.Errorf("Kubesession: BuildConfigFromFlags() failed with %v", err)
 	}
 	return config, err
 }
