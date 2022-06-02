@@ -280,7 +280,7 @@ func (xxxProvider) initialBuild(namespace string) error {
 	if runtime.GOARCH == "amd64" {
 		imagePath = "registry.hub.docker.com/clarkezone/jekyllbuilder:0.0.1.8"
 	} else {
-		imagePath = "registry.dev.clarkezone.dev/jekyllbuilder:arm"
+		imagePath = "registry.dev.clarkezone.dev/jekyllbuilder:arm-6-1-22"
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
