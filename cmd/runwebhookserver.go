@@ -273,7 +273,7 @@ func (xxxProvider) initialBuild(namespace string) error {
 		return fmt.Errorf("initialBuild() source name empty")
 	}
 	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
-	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", true)
+	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 	var imagePath string
 	fmt.Printf("%v", runtime.GOARCH)
