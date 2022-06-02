@@ -283,7 +283,7 @@ func (xxxProvider) initialBuild(namespace string) error {
 		imagePath = "registry.dev.clarkezone.dev/jekyllbuilder:arm-6-1-22"
 	}
 	command := []string{"sh", "-c", "--"}
-	params := []string{"cd /src;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
+	params := []string{"cd /src/source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
 	clarkezoneLog.Debugf("initialBuild() submitting job namespace:%v, imagePath:%v, command:%v, pararms:%v, refs:%v",
 		namespace, imagePath, command, params, refs)
 	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
