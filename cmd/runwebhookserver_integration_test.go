@@ -30,7 +30,20 @@ func TestSetupEnvironment(t *testing.T) {
 
 func TestCreateJobForClone(t *testing.T) {
 	ks := getKubeSession(t)
-	createJobForClone(t, ks)
+
+	// create job to launch clone only previewd with persistent volumes bound
+	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
+	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	cmd := []string{"./previewd"}
+	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git", "--localdir=/src", " --initialclone=true",
+		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
+	_, err := ks.CreateJob("populatepv", testNamespace, imagePath, cmd, args, nil, false, refs)
+	if err != nil {
+		t.Fatalf("create job failed: %v", err)
+	}
+	// TODO wait for job to complete
 }
 
 func TestCreateJobTestServerMountVols(t *testing.T) {
@@ -38,7 +51,7 @@ func TestCreateJobTestServerMountVols(t *testing.T) {
 	createJobForTestServerWithMountedVols(t, ks)
 }
 
-func TestCreateJobRenderUsingPrepared(t *testing.T) {
+func TestCreateJobUsinsingPreparedJekyll(t *testing.T) {
 	ks := getKubeSession(t)
 	completechannel, deletechannel, notifier := getNotifier()
 
@@ -47,11 +60,13 @@ func TestCreateJobRenderUsingPrepared(t *testing.T) {
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 
-	cmd := []string{"sh", "-c", "--"}
-	params := []string{"sleep 100000"}
+	// cmd := []string{"sh", "-c", "--"}
+	// params := []string{"sleep 100000"}
+	cmd, params := getJekyllCommands()
+	image := getJekyllImage()
 
 	outputjob := runTestJod(ks, "jekyllrender", testNamespace,
-		"registry.hub.docker.com/clarkezone/jekyll:sha-df0a146",
+		image,
 		completechannel, deletechannel, t, cmd, params, notifier, refs)
 
 	if outputjob.Status.Succeeded != 1 {
@@ -59,7 +74,25 @@ func TestCreateJobRenderUsingPrepared(t *testing.T) {
 	}
 }
 
+func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
+	ks := getKubeSession(t)
+	// create job to launch clone only previewd with persistent volumes bound
+	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
+	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	cmd := []string{"./previewd"}
+	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git",
+		"--localdir=/src", " --initialclone=false",
+		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
+	_, err := ks.CreateJob("rendertopv", testNamespace, imagePath, cmd, args, nil, false, refs)
+	if err != nil {
+		t.Fatalf("create job failed: %v", err)
+	}
+}
+
 func TestRunWebhookServercmd(t *testing.T) {
+	// ? can this work because stuff isn't cloned
 	localdir := t.TempDir()
 	p := &xxxProvider{}
 	cmd := getRunWebhookServerCmd(p)
@@ -138,6 +171,7 @@ func createJobForTestServerWithMountedVols(t *testing.T, ks *kubelayer.KubeSessi
 	}
 }
 
+// TODO: share with unit test
 func runTestJod(ks *kubelayer.KubeSession, jobName string, testNamespace string, imageUrl string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
 	t *testing.T, command []string, args []string, notifier func(*batchv1.Job, kubelayer.ResourseStateType),
 	mountlist []kubelayer.PVClaimMountRef) batchv1.Job {
