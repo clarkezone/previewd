@@ -31,83 +31,12 @@ const (
 	testNamespace = "testns"
 )
 
-func GetKubeSession(t *testing.T) *KubeSession {
-	c := getTestConfig(t)
-	ks, err := Newkubesession(c)
-	if err != nil {
-		t.Fatalf("failed to get kubesession %v", err)
-	}
-	err = ks.StartWatchers(testNamespace, true)
-	if err != nil {
-		t.Fatalf("failed to start watchers %v", err)
-	}
-
-	return ks
-}
-
-func createNSIfMissing(ks *KubeSession, recreate bool, t *testing.T) {
-	ns, err := ks.GetNamespace(testNamespace)
-	if err != nil && !apimachinery.IsNotFound(err) {
-		t.Fatalf("failed to get namespace %v", err)
-	}
-
-	if recreate && ns != nil {
-		wait := make(chan bool)
-		err = ks.DeleteNamespace(testNamespace, func(ns *corev1.Namespace, rt ResourseStateType) {
-			if rt == Delete {
-				wait <- true
-			}
-		})
-		if err != nil {
-			t.Fatalf("CreateNamespace failed %v", err)
-		}
-		<-wait
-		ns = nil
-	}
-
-	if ns == nil {
-		wait := make(chan bool)
-		err = ks.CreateNamespace(testNamespace, func(ns *corev1.Namespace, rt ResourseStateType) {
-			if rt == Create {
-				wait <- true
-			}
-		})
-		if err != nil {
-			t.Fatalf("CreateNamespace failed %v", err)
-		}
-		<-wait
-	}
-}
-
-func RunTestJob(ks *KubeSession, testNamespace string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
-	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType),
-	mountlist []PVClaimMountRef) batchv1.Job {
-	// SkipCI(t)
-	defer ks.Close()
-
-	_, err := ks.CreateJob("alpinetest", testNamespace, "alpine", command, nil, notifier, false, mountlist)
-	if err != nil {
-		t.Fatalf("Unable to create job %v", err)
-	}
-	outputjob := <-completechannel
-
-	log.Println("Completed; attempting delete")
-	err = ks.DeleteJob("alpinetest", testNamespace)
-	if err != nil {
-		t.Fatalf("Unable to delete job %v", err)
-	}
-	log.Println(("Deleted."))
-	<-deletechannel
-
-	return outputjob
-}
-
 func TestCreateAndSucceed(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	completechannel, deletechannel, notifier := getNotifier()
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, false, t)
-	outputjob := RunTestJob(ks, testNamespace, completechannel, deletechannel, t, nil, notifier, nil)
+	outputjob := runTestJob(ks, "alpinetest", testNamespace, "alpine", completechannel, deletechannel, t, nil, notifier, nil)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
 	}
@@ -117,16 +46,16 @@ func TestCreateAndErrorWork(t *testing.T) {
 	t.Logf("TestCreateAndSucceed")
 	completechannel, deletechannel, notifier := getNotifier()
 	command := []string{"error"}
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, true, t)
-	outputjob := RunTestJob(ks, testNamespace, completechannel, deletechannel, t, command, notifier, nil)
+	outputjob := runTestJob(ks, "alpinetest", testNamespace, "alpine", completechannel, deletechannel, t, command, notifier, nil)
 	if outputjob.Status.Failed != 1 {
 		t.Fatalf("Jobs didn't fail")
 	}
 }
 
 func TestCreatePersistentVolumeClaim(t *testing.T) {
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, true, t)
 	err := ks.CreatePersistentVolumeClaim("source", testNamespace)
 	if err != nil {
@@ -141,7 +70,7 @@ func TestCreatePersistentVolumeClaim(t *testing.T) {
 
 func TestFindVolumeSuccess(t *testing.T) {
 	const name = "render"
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, true, t)
 
 	err := ks.CreatePersistentVolumeClaim(name, testNamespace)
@@ -159,7 +88,7 @@ func TestFindVolumeSuccess(t *testing.T) {
 
 func TestFindVolumeFail(t *testing.T) {
 	const name = "notexists"
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, false, t)
 	render, err := ks.FindpvClaimByName(name, testNamespace)
 	if err != nil {
@@ -177,7 +106,7 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	const sourcename = "source"
 	completechannel, deletechannel, notifier := getNotifier()
 	// find render vol by name
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, true, t)
 
 	err := ks.CreatePersistentVolumeClaim(sourcename, testNamespace)
@@ -207,19 +136,18 @@ func TestCreateJobwithVolumes(t *testing.T) {
 	srcref := ks.CreatePvCMountReference(source, "/src", true)
 	refs := []PVClaimMountRef{renderref, srcref}
 
-	outputjob := RunTestJob(ks, testNamespace, completechannel, deletechannel, t, nil, notifier, refs)
+	outputjob := runTestJob(ks, "testjob", testNamespace, "alpine", completechannel, deletechannel, t, nil, notifier, refs)
 	if outputjob.Status.Succeeded != 1 {
 		t.Fatalf("Jobs didn't succeed")
 	}
 }
 
 func TestCreateDeletetestNamespace(t *testing.T) {
-	ks := GetKubeSession(t)
+	ks := getKubeSession(t)
 	createNSIfMissing(ks, true, t)
 }
 
 func TestGetConfig(t *testing.T) {
-	// SkipCI(t)
 	t.Logf("TestGetConfig")
 
 	c := getTestConfig(t)
@@ -267,4 +195,74 @@ func getTestConfig(t *testing.T) *rest.Config {
 		t.Fatalf("Couldn't get config %v", err)
 	}
 	return c
+}
+
+func getKubeSession(t *testing.T) *KubeSession {
+	c := getTestConfig(t)
+	ks, err := Newkubesession(c)
+	if err != nil {
+		t.Fatalf("failed to get kubesession %v", err)
+	}
+	err = ks.StartWatchers(testNamespace, true)
+	if err != nil {
+		t.Fatalf("failed to start watchers %v", err)
+	}
+
+	return ks
+}
+
+func createNSIfMissing(ks *KubeSession, recreate bool, t *testing.T) {
+	ns, err := ks.GetNamespace(testNamespace)
+	if err != nil && !apimachinery.IsNotFound(err) {
+		t.Fatalf("failed to get namespace %v", err)
+	}
+
+	if recreate && ns != nil {
+		wait := make(chan bool)
+		err = ks.DeleteNamespace(testNamespace, func(ns *corev1.Namespace, rt ResourseStateType) {
+			if rt == Delete {
+				wait <- true
+			}
+		})
+		if err != nil {
+			t.Fatalf("CreateNamespace failed %v", err)
+		}
+		<-wait
+		ns = nil
+	}
+
+	if ns == nil {
+		wait := make(chan bool)
+		err = ks.CreateNamespace(testNamespace, func(ns *corev1.Namespace, rt ResourseStateType) {
+			if rt == Create {
+				wait <- true
+			}
+		})
+		if err != nil {
+			t.Fatalf("CreateNamespace failed %v", err)
+		}
+		<-wait
+	}
+}
+
+func runTestJob(ks *KubeSession, jobName string, testNamespace string, imageUrl string, completechannel chan batchv1.Job, deletechannel chan batchv1.Job,
+	t *testing.T, command []string, notifier func(*batchv1.Job, ResourseStateType),
+	mountlist []PVClaimMountRef) batchv1.Job {
+	defer ks.Close()
+
+	_, err := ks.CreateJob(jobName, testNamespace, imageUrl, command, nil, notifier, false, mountlist)
+	if err != nil {
+		t.Fatalf("Unable to create job %v", err)
+	}
+	outputjob := <-completechannel
+
+	log.Println("Completed; attempting delete")
+	err = ks.DeleteJob("alpinetest", testNamespace)
+	if err != nil {
+		t.Fatalf("Unable to delete job %v", err)
+	}
+	log.Println(("Deleted."))
+	<-deletechannel
+
+	return outputjob
 }

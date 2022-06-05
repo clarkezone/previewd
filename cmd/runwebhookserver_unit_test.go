@@ -15,11 +15,6 @@ func init() {
 	clarkezoneLog.Init(logrus.DebugLevel)
 }
 
-// nolint
-const (
-	testNamespace = "testns"
-)
-
 type webhooklistenmockprovider struct {
 	mock.Mock
 }
@@ -51,6 +46,7 @@ func (*webhooklistenmockprovider) needInitialization() bool {
 }
 
 func Test_CmdBase(t *testing.T) {
+	localdir := t.TempDir()
 	clarkezoneLog.Debugf("Test_cmdBase Start ============================================================== ")
 	m := &webhooklistenmockprovider{}
 	m.On("initialClone", "http://foo", "").Return(nil)
@@ -59,8 +55,9 @@ func Test_CmdBase(t *testing.T) {
 	m.On("waitForInterupt").Return()
 
 	cmd := getRunWebhookServerCmd(m)
+
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", "/tmp", "--kubeconfigpath", internal.GetTestConfigPath(t)})
+		"--localdir", localdir, "--kubeconfigpath", internal.GetTestConfigPath(t)})
 
 	err := cmd.Execute()
 	if err != nil {

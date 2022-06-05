@@ -273,17 +273,10 @@ func (xxxProvider) initialBuild(namespace string) error {
 		return fmt.Errorf("initialBuild() source name empty")
 	}
 	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
-	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", true)
+	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	var imagePath string
-	fmt.Printf("%v", runtime.GOARCH)
-	if runtime.GOARCH == "amd64" {
-		imagePath = "registry.hub.docker.com/clarkezone/jekyllbuilder:0.0.1.8"
-	} else {
-		imagePath = "registry.dev.clarkezone.dev/jekyllbuilder:arm"
-	}
-	command := []string{"sh", "-c", "--"}
-	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
+	imagePath := getJekyllImage()
+	command, params := getJekyllCommands()
 	clarkezoneLog.Debugf("initialBuild() submitting job namespace:%v, imagePath:%v, command:%v, pararms:%v, refs:%v",
 		namespace, imagePath, command, params, refs)
 	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
@@ -292,6 +285,17 @@ func (xxxProvider) initialBuild(namespace string) error {
 		clarkezoneLog.Errorf("Failed to create job: %v", err.Error())
 	}
 	return nil
+}
+
+func getJekyllImage() string {
+	fmt.Printf("%v", runtime.GOARCH)
+	return "registry.hub.docker.com/clarkezone/jekyll:sha-df0a146"
+}
+
+func getJekyllCommands() ([]string, []string) {
+	command := []string{"sh", "-c", "--"}
+	params := []string{"cd /src/source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
+	return command, params
 }
 
 func init() {

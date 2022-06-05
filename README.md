@@ -62,7 +62,8 @@ A daemon for managing rendering for static sites and blogs in kubernetes using j
 
 # End to end secenario for clone, webhook, render via job works from cmdline
 
-- [ ] port main function from jekyllpreview prototype repo into cobra commands
+- [x] port main function from jekyllpreview prototype repo into cobra commands
+- [ ] test for webhook using curl
 - [ ] update readme to reflect how to run helloworld
 
 # Integration tests run in Github Actions for PR's
