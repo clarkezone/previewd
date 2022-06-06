@@ -57,10 +57,10 @@ install-tools:
 test:
 	go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
 
-.PHONY: integration-actions
-integration-actions:
-	go test g -tags="common actions" --count=1 -v -timeout 15m
-
+.PHONY: integration
+integration:
+	go test -tags="integration" --count=1 -v -timeout 15m ./pkg/kubelayer/...
+#	go test -tags="integration" --count=1 -v -timeout 15m ./pkg/jobmanager/...
 .PHONY: dep
 dep:
 	go mod tidy

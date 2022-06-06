@@ -3,6 +3,7 @@ package localrepomanager
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"regexp"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/clarkezone/previewd/pkg/jobmanager"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
-	batchv1 "k8s.io/api/batch/v1"
 )
 
 type newBranchHandler interface {
@@ -143,19 +143,13 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 	return nil
 }
 
+// nolint
 func (lrm *LocalRepoManager) startJob() {
 	if lrm.jm == nil {
 		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
 		return
 	}
 	namespace := "jekyllpreviewv2"
-	notifier := (func(job *batchv1.Job, typee jobmanager.ResourseStateType) {
-		clarkezoneLog.Debugf("Got job in outside world %v", typee)
-
-		if typee == jobmanager.Update && job.Status.Active == 0 && job.Status.Failed > 0 {
-			clarkezoneLog.Debugf("Failed job detected")
-		}
-	})
 	var imagePath string
 	fmt.Printf("%v", runtime.GOARCH)
 	if runtime.GOARCH == "amd64" {
@@ -165,7 +159,8 @@ func (lrm *LocalRepoManager) startJob() {
 	}
 	command := []string{"sh", "-c", "--"}
 	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	_, err := lrm.jm.CreateJob("jekyll-render-container", namespace, imagePath, command, params, notifier)
+	log.Fatalf("fix this")
+	err := lrm.jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command, params, nil)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
 	}

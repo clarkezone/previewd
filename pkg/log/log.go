@@ -78,7 +78,9 @@ func SetOutputFormat(format string) {
 
 // Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
-	log.writer.Debugf(format, args...)
+	if log.writer != nil {
+		log.writer.Debugf(format, args...)
+	}
 }
 
 // Infof writes a info-level log with a format

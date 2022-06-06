@@ -6,30 +6,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/clarkezone/previewd/internal"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	"github.com/sirupsen/logrus"
 )
-
-const (
-	testreponame         = "TEST_GITLAYER_REPO_NOAUTHURL"
-	testlocaldirname     = "TEST_GITLAYER_LOCALDIR"
-	testbranchswitchname = "TEST_GITLAYER_BRANCHSWITCH"
-	testsecurereponame   = "TEST_GITLAYER_SECURE_REPO_NOAUTH"
-	//nolint
-	testsecureclonepwname = "TEST_GITLAYER_SECURECLONEPWNAME"
-)
-
-// configure environment variables by:
-// 1. command palette: open settings (json)
-// 2. append the following
-// "go.testEnvFile": "/home/james/.previewd_test.env",
-// 3. contents of file
-// TEST_GITLAYER_REPO_NOAUTHURL="https:/"
-// TEST_GITLAYER_LOCALDIR=""
-// TEST_GITLAYER_BRANCHSWITCH=""
-// TEST_GITLAYER_SECURE_REPO_NOAUTH=""
-// TEST_GITLAYER_SECURECLONEPW=""
-// TEST_GITLAYER_TESTLOCALK8S=""
 
 // TestMain initizlie all tests
 func TestMain(m *testing.M) {
@@ -40,7 +20,7 @@ func TestMain(m *testing.M) {
 
 func TestAllReadEnvTest(t *testing.T) {
 	t.Logf("TestAllReadEnvTest")
-	repo, localdr, testbranchswitch, _, _ := Getenv(t)
+	repo, localdr, testbranchswitch, _, _ := internal.Getenv(t)
 	if repo == "" || localdr == "" || testbranchswitch == "" {
 		t.Fatalf("Test environment variables not configured repo:%v, localdr:%v, testbranchswitch:%v,\n",
 			repo, localdr, testbranchswitch)
@@ -50,7 +30,7 @@ func TestAllReadEnvTest(t *testing.T) {
 func TestCloneNoAuth(t *testing.T) {
 	t.Logf("TestCloneNoAuth")
 	//nolint
-	reponame, dirName, _, _, _ := Getenv(t)
+	reponame, dirName, _, _, _ := internal.Getenv(t)
 
 	err := os.RemoveAll(dirName)
 	if err != nil {
@@ -86,7 +66,7 @@ func TestCloneNoAuth(t *testing.T) {
 
 func TestPullBranch(t *testing.T) {
 	t.Logf("TestPullBranch")
-	reponame, dirName, branch, _, _ := Getenv(t)
+	reponame, dirName, branch, _, _ := internal.Getenv(t)
 
 	err := os.RemoveAll(dirName)
 	if err != nil {
@@ -113,7 +93,7 @@ func TestPullBranch(t *testing.T) {
 		log.Fatal("pull failed")
 	}
 
-	const expectedcount = 22
+	const expectedcount = 23
 	if len(infos) != expectedcount { // One extra for .git
 		log.Fatalf("pull failed file mismatch error expected %v found %v", expectedcount, len(infos))
 	}
@@ -168,16 +148,3 @@ func TestPullBranch(t *testing.T) {
 // 		log.Fatal("TestCloneAuth: removeallfailed")
 // 	}
 // }
-
-func Getenv(t *testing.T) (string, string, string, string, string) {
-	repo := os.Getenv(testreponame)
-	localdr := os.Getenv(testlocaldirname)
-	testbranchswitch := os.Getenv(testbranchswitchname)
-	reposecure := os.Getenv(testsecurereponame)
-	secureclonepw := os.Getenv(testsecureclonepwname)
-	if repo == "" || localdr == "" || testbranchswitch == "" {
-		t.Fatalf("Test environment variables not configured repo:%v, localdr:%v, testbranchswitch:%v,\n",
-			repo, localdr, testbranchswitch)
-	}
-	return repo, localdr, testbranchswitch, reposecure, secureclonepw
-}
