@@ -6,8 +6,6 @@ metadata:
   labels:
     app: previewdtest
 spec:
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       app: previewdtest
