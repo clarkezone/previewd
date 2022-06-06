@@ -4,6 +4,30 @@
 
 A daemon for managing rendering for static sites and blogs in kubernetes using jobs.
 
+# Deploy test manifest to Kubernetes
+
+In order to experiment in a test environment, there are a set of test manifests in the `k8s` directory which do a simple deployment that starts previewd in webhook mode, pointing at a repro containing a jekyll blog source. That results in the previewd pod being spun up which will clone the git repo to the sourcepv volume and then launch a kubernetes job to perform the render. That job uses a vanilla jekyll docker image.
+
+> If you are interested in following these steps you need a Kubernetes cluster to play with.
+> You can deploy into your own test cluster or, if you don't have one, grab [minikube](https://minikube.sigs.k8s.io/docs/start/) (or an alternative)
+
+Apply manifests as follows:
+
+```sh
+# ensure you have minikube installed or have a valid kube context
+cd k8s
+kubectl apply -f namespace.yaml
+kubectl apply -f .
+```
+
+You can then check that the deployment has been created by using:
+
+```sh
+kubectl get deployments -n previewdtest
+```
+
+Take a look at the logs to see what's going on.
+
 # ~~Get basic skeleton app going~~
 
 - [x] Badges, CI/CD, Test infra, Code Coverage, license, Linting, precommit, Dockfile, basic cli app with test server with basic logging and metrics
