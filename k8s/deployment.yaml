@@ -28,7 +28,7 @@ spec:
             - name: LOCALDIR
               value: /src
             - name: LOGLEVEL
-              value: debuj
+              value: debug
             - name: NAMESPACE
               value: previewdtest
           volumeMounts:
