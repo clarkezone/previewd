@@ -1,44 +1,45 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    deployment.kubernetes.io/revision: "1"
+  name: previewddeployment
+  namespace: previewdtest
   labels:
-    app: previewdtestserver
-  name: previewdtestserver
+    app: previewdtest
 spec:
-  progressDeadlineSeconds: 600
-  replicas: 1
-  revisionHistoryLimit: 10
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
-      app: previewdtestserver
-  strategy:
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
-    type: RollingUpdate
+      app: previewdtest
   template:
     metadata:
-      creationTimestamp: null
       labels:
-        app: previewdtestserver
+        app: previewdtest
     spec:
+      serviceAccountName: previewd-sa
       containers:
-        - image: registry.hub.docker.com/clarkezone/previewd:0.0.2
-          imagePullPolicy: IfNotPresent
-          name: previewd
+        - name: previewd-server
+          image: registry.hub.docker.com/clarkezone/previewd:webhookcmdline
+          imagePullPolicy: Always
+          args: ["runwebhookserver"]
           env:
-            - name: PORT
-              value: "8080"
+            - name: TARGETREPO
+              value: https://github.com/clarkezone/selfhostinfrablog.git
+            - name: LOCALDIR
+              value: /src
             - name: LOGLEVEL
-              value: "debug"
+              value: debuj
+            - name: NAMESPACE
+              value: previewdtest
+          volumeMounts:
+            - mountPath: /src
+              name: blogsource
           ports:
-            - containerPort: 8080
-              protocol: TCP
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-      dnsPolicy: ClusterFirst
-      restartPolicy: Always
-      schedulerName: default-scheduler
-      terminationGracePeriodSeconds: 30
+            - containerPort: 8090
+      volumes:
+        - name: blogsource
+          persistentVolumeClaim:
+            claimName: blogsource-pvc
+        - name: blogrender
+          persistentVolumeClaim:
+            claimName: blogrender-pvc
