@@ -48,6 +48,9 @@ var GitRoot string
 
 // SetupGitRoot finds the gitroot for this repo
 func SetupGitRoot() {
+
+	GitRoot = "/usr/src/app"
+	return
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
 
 	output, err := cmd.CombinedOutput()

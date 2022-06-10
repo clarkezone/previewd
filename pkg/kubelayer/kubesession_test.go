@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	testNamespace = "testns"
+	testNamespace = ""
 )
 
 func TestCreateAndSucceed(t *testing.T) {
@@ -159,6 +159,18 @@ func TestGetConfig(t *testing.T) {
 	// TODO wait for error exit
 }
 
+// GetConfigIncluster returns a config that will work when caller is running in a k8s cluster
+func getConfigIncluster() (*rest.Config, error) {
+	clarkezoneLog.Debugf("Kubesession: GetConfigIncluster() called with incluster")
+	var config *rest.Config
+	var err error
+	config, err = rest.InClusterConfig()
+	if err != nil {
+		clarkezoneLog.Errorf("Kubesession: InClusterConfig() returned error %v", err)
+	}
+	return config, err
+}
+
 func getNotifier() (chan batchv1.Job, chan batchv1.Job, func(job *batchv1.Job, typee ResourseStateType)) {
 	completechannel := make(chan batchv1.Job)
 	deletechannel := make(chan batchv1.Job)
@@ -198,12 +210,16 @@ func getTestConfig(t *testing.T) *rest.Config {
 }
 
 func getKubeSession(t *testing.T) *KubeSession {
-	c := getTestConfig(t)
+	//c := getTestConfig(t)
+	c, err := getConfigIncluster()
+	if err != nil {
+		t.Fatalf("failed to get config %v", err)
+	}
 	ks, err := Newkubesession(c)
 	if err != nil {
 		t.Fatalf("failed to get kubesession %v", err)
 	}
-	err = ks.StartWatchers(testNamespace, true)
+	err = ks.StartWatchers(testNamespace, false)
 	if err != nil {
 		t.Fatalf("failed to start watchers %v", err)
 	}
