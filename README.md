@@ -53,19 +53,39 @@ This project is still in development and as such we don't yet have instructions 
 
 1. Install a recent version of golang, we recommend 1.17 or greater.
 2. In order to run integration tests you'll need a kubernetes environment. For development we use k3s
+3. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
+4. Define environment variables TODO
+5. precommit TODO
+6. githook TODO
 
 ### Build from Source
 
-To compine the main previewd executable:
+To compile the main previewd executable:
 
 ```bash
 make build
 ```
 
-### Run test
+Which will produce a binary at <projectroot>/bin/previewd
 
-previewd comes with both unit and integration tests. Unit tests run standalone with no dependencies.
+To build the docker container
 
-For unit tests, use `make test`
+```bash
+docker build .
+```
 
-For integration test, use `make integration`
+### Run tests
+
+This project comes with both unit and integration tests. Unit tests run standalone with no dependencies other than test environment configuration. Integration tests require a kubernetes cluster.
+
+For unit tests, use:
+
+```bash
+make test
+```
+
+For integration test, use:
+
+```bash
+make integration
+```
