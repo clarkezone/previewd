@@ -99,15 +99,16 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 
 	localdir := t.TempDir()
 
-	// TODO wrap xxxProvider to hook job completion
+	// TODO wrap xxxProvider to hook job completion and waitForInterrupt
 	p := &xxxProvider{}
 	cmd := getRunWebhookServerCmd(p)
 
 	// targetrepo and localdir are unused as no initial clone
 	// webhook will run job in cluster
-	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", localdir, "--kubeconfigpath", internal.GetTestConfigPath(t), " --initialclone", "false",
-		"--initialbuild", "true", "--webhooklisten", "true", "--loglevel", "debug"})
+	cmd.SetArgs([]string{"--targetrepo=http://foo",
+		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=testns",
+		"--initialclone=false",
+		"--initialbuild=true", "--webhooklisten=true"})
 
 	// TODO use goroutine
 	// Execute will block until sigterm
