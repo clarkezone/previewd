@@ -2,13 +2,11 @@
 package localrepomanager
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path"
 	"regexp"
-	"runtime"
 
+	"github.com/clarkezone/previewd/internal"
 	"github.com/clarkezone/previewd/pkg/jobmanager"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -143,23 +141,16 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 	return nil
 }
 
-// nolint
 func (lrm *LocalRepoManager) startJob() {
 	if lrm.jm == nil {
 		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
 		return
 	}
+	// TODO: eliminate constant
 	namespace := "jekyllpreviewv2"
-	var imagePath string
-	fmt.Printf("%v", runtime.GOARCH)
-	if runtime.GOARCH == "amd64" {
-		imagePath = "registry.hub.docker.com/clarkezone/jekyllbuilder:0.0.1.8"
-	} else {
-		imagePath = "registry.dev.clarkezone.dev/jekyllbuilder:arm"
-	}
-	command := []string{"sh", "-c", "--"}
-	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	log.Fatalf("fix this")
+	imagePath := internal.GetJekyllImage()
+
+	command, params := internal.GetJekyllCommands()
 	err := lrm.jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command, params, nil)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())

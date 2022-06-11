@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"runtime"
 
 	"github.com/clarkezone/previewd/pkg/config"
 	"github.com/clarkezone/previewd/pkg/jobmanager"
@@ -275,8 +274,8 @@ func (xxxProvider) initialBuild(namespace string) error {
 	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
 	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := getJekyllImage()
-	command, params := getJekyllCommands()
+	imagePath := internal.GetJekyllImage()
+	command, params := internal.GetJekyllCommands()
 	clarkezoneLog.Debugf("initialBuild() submitting job namespace:%v, imagePath:%v, command:%v, pararms:%v, refs:%v",
 		namespace, imagePath, command, params, refs)
 	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
@@ -285,17 +284,6 @@ func (xxxProvider) initialBuild(namespace string) error {
 		clarkezoneLog.Errorf("Failed to create job: %v", err.Error())
 	}
 	return nil
-}
-
-func getJekyllImage() string {
-	fmt.Printf("%v", runtime.GOARCH)
-	return "registry.hub.docker.com/clarkezone/jekyll:sha-df0a146"
-}
-
-func getJekyllCommands() ([]string, []string) {
-	command := []string{"sh", "-c", "--"}
-	params := []string{"cd /src/source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	return command, params
 }
 
 func init() {

@@ -62,8 +62,8 @@ func TestCreateJobUsinsingPreparedJekyll(t *testing.T) {
 
 	// cmd := []string{"sh", "-c", "--"}
 	// params := []string{"sleep 100000"}
-	cmd, params := getJekyllCommands()
-	image := getJekyllImage()
+	cmd, params := internal.GetJekyllCommands()
+	image := internal.GetJekyllImage()
 
 	outputjob := runTestJod(ks, "jekyllrender", testNamespace,
 		image,
