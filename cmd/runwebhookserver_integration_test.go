@@ -35,7 +35,7 @@ func TestCreateJobForClone(t *testing.T) {
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git", "--localdir=/src", " --initialclone=true",
 		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
@@ -80,7 +80,7 @@ func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git",
 		"--localdir=/src", " --initialclone=false",
@@ -147,7 +147,7 @@ func createJobForClone(t *testing.T, ks *kubelayer.KubeSession) {
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=false",
 		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
@@ -162,7 +162,7 @@ func createJobForTestServerWithMountedVols(t *testing.T, ks *kubelayer.KubeSessi
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:webhookcmdline"
+	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"testserver"}
 	_, err := ks.CreateJob("testserver", testNamespace, imagePath, cmd, args, nil, false, refs)

@@ -25,7 +25,7 @@ spec:
         app: previewdtestserver
     spec:
       containers:
-        - image: registry.hub.docker.com/clarkezone/previewd:0.0.2
+        - image: registry.hub.docker.com/clarkezone/previewd:0.0.3
           imagePullPolicy: IfNotPresent
           name: previewd
           env:
