@@ -257,7 +257,7 @@ func runTestJob(ks *KubeSession, jobName string, testNamespace string, imageUrl 
 	outputjob := <-completechannel
 
 	log.Println("Completed; attempting delete")
-	err = ks.DeleteJob("alpinetest", testNamespace)
+	err = ks.DeleteJob(jobName, testNamespace)
 	if err != nil {
 		t.Fatalf("Unable to delete job %v", err)
 	}
