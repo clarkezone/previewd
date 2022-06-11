@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	renderPvName  = "render"
-	sourcePvName  = "source"
-	testNamespace = "testns"
+	renderPvName      = "render"
+	sourcePvName      = "source"
+	testNamespace     = "testns"
+	previewdImagePath = "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 )
 
 func TestSetupEnvironment(t *testing.T) {
@@ -35,11 +36,10 @@ func TestCreateJobForClone(t *testing.T) {
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git", "--localdir=/src", " --initialclone=true",
 		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
-	_, err := ks.CreateJob("populatepv", testNamespace, imagePath, cmd, args, nil, false, refs)
+	_, err := ks.CreateJob("populatepv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestCreateJobUsinsingPreparedJekyll(t *testing.T) {
 	ks := getKubeSession(t)
 	completechannel, deletechannel, notifier := getNotifier()
 
-	// create job to launch clone only previewd with persistent volumes bound
+	// create job to render using jekyll docker image from prepared source
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
@@ -76,59 +76,46 @@ func TestCreateJobUsinsingPreparedJekyll(t *testing.T) {
 
 func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 	ks := getKubeSession(t)
-	// create job to launch clone only previewd with persistent volumes bound
+	// create a job that launches previewd in cluster perferming initial build
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git",
 		"--localdir=/src", " --initialclone=false",
 		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
-	_, err := ks.CreateJob("rendertopv", testNamespace, imagePath, cmd, args, nil, false, refs)
+	_, err := ks.CreateJob("rendertopv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
 	}
 }
 
-func TestRunWebhookServercmd(t *testing.T) {
-	// ? can this work because stuff isn't cloned
+func TestFullE2eTestWithWebhook(t *testing.T) {
+	// launch previewd out of cluster with pre-cloned source valid for jekyll
+	// previewd will create an initial in-cluster renderjob which should succeed
+	// test calls webhook which creates a second job to re-render which should succeed
+	// requires TestSetupEnvironment()
+	// requires TestCreateJobForClone()
+
 	localdir := t.TempDir()
+
+	// TODO wrap xxxProvider to hook job completion
 	p := &xxxProvider{}
 	cmd := getRunWebhookServerCmd(p)
 
+	// targetrepo and localdir are unused as no initial clone
+	// webhook will run job in cluster
 	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", localdir, "--kubeconfigpath", internal.GetTestConfigPath(t)})
+		"--localdir", localdir, "--kubeconfigpath", internal.GetTestConfigPath(t), " --initialclone", "false",
+		"--initialbuild", "true", "--webhooklisten", "true", "--loglevel", "debug"})
 
+	// TODO use goroutine
+	// Execute will block until sigterm
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// 	// TODO: create test namespace
-	// 	jm, err := jobmanager.Newjobmanager(GetTestConfig(t), testNamespace, false)
-	// 	if err != nil {
-	// 		t.Errorf("job manager create failed")
-	// 	}
-	// 	//	err = jm.KubeSession().CreateNamespace(testNamespace)
-	// 	//	if err != nil {
-	// 	//		t.Fatalf("unable to create namespace %v", err)
-	// 	//	}
-	// 	createVolumes(err, jm.KubeSession(), t)
-	//
-	// 	repo, localdir, _, _, _ := internal.Getenv(t)
-	// 	c := GetTestConfig(t)
-	// 	err = PerformActions(currentProvider, c, repo, localdir, "main", "testns", false, false, true, true)
-	// 	if err != nil {
-	// 		t.Fatalf("Performactions failed %v", err)
-	// 	}
-	//
-	// 	// TODO: call post to webhook to trigger job
-}
-
-func ToDoFullE2eTestWithWebhook() {
-	// pass args into cmd
-	// TODO
 }
 
 func prepareEnvironment(t *testing.T) {
@@ -147,11 +134,10 @@ func createJobForClone(t *testing.T, ks *kubelayer.KubeSession) {
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=false",
 		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
-	_, err := ks.CreateJob("populatepv", testNamespace, imagePath, cmd, args, nil, false, refs)
+	_, err := ks.CreateJob("populatepv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
 	}
@@ -162,10 +148,9 @@ func createJobForTestServerWithMountedVols(t *testing.T, ks *kubelayer.KubeSessi
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"testserver"}
-	_, err := ks.CreateJob("testserver", testNamespace, imagePath, cmd, args, nil, false, refs)
+	_, err := ks.CreateJob("testserver", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
 	}
