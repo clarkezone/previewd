@@ -7,7 +7,10 @@
 package cmd
 
 import (
+	"io"
 	"log"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -143,32 +146,48 @@ func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
 
 type e2emockprovider struct {
 	// mock.Mock
+	doneChan        chan struct{}
+	wrappedProvider providers
+}
+
+func newE2mockprovider(p providers) *e2emockprovider {
+	provider := e2emockprovider{}
+	provider.doneChan = make(chan struct{})
+	provider.wrappedProvider = p
+	return &provider
 }
 
 func (p *e2emockprovider) initialClone(a string, b string) error {
 	// p.Called(a, b)
-	return nil
+	clarkezoneLog.Debugf("initialClone with %v and %v", a, b)
+	return p.wrappedProvider.initialClone(a, b)
 }
 
 func (p *e2emockprovider) initialBuild(a string) error {
 	clarkezoneLog.Debugf("== initial build with '%v'", a)
 	// p.Called(a)
-	return nil
+	return p.wrappedProvider.initialBuild(a)
 }
 
 func (p *e2emockprovider) webhookListen() {
 	clarkezoneLog.Debugf("webhookListen")
-	// p.Called()
+	p.wrappedProvider.webhookListen()
 }
 
 func (p *e2emockprovider) waitForInterupt() error {
 	clarkezoneLog.Debugf("waitForInterupt")
 	// p.Called()
+	<-p.doneChan
 	return nil
 }
 
-func (*e2emockprovider) needInitialization() bool {
-	return false
+func (p *e2emockprovider) needInitialization() bool {
+	clarkezoneLog.Debugf("needInitialization")
+	return p.wrappedProvider.needInitialization()
+}
+
+func (p *e2emockprovider) signalDone() {
+	close(p.doneChan)
 }
 
 func TestFullE2eTestWithWebhook(t *testing.T) {
@@ -183,9 +202,9 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	var cm *CompletionTrackingJobManager
 	jm, cm = getCompletionTrackingJobManager(t)
 
-	// TODO wrap xxxProvider to hook job completion and waitForInterrupt
 	p := &xxxProvider{}
-	cmd := getRunWebhookServerCmd(p)
+	wp := newE2mockprovider(p)
+	cmd := getRunWebhookServerCmd(wp)
 
 	// targetrepo and localdir are unused as no initial clone
 	// webhook will run job in cluster
@@ -194,23 +213,41 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 		"--initialclone=false",
 		"--initialbuild=true", "--webhooklisten=true"})
 
-	// TODO use goroutine
-	// Execute will block until sigterm
-	err := cmd.Execute()
-	if err != nil {
-		t.Fatal(err)
-	}
+	waitExit := make(chan error)
+	go func() {
+		err := cmd.Execute()
+		waitExit <- err
+		close(waitExit)
+	}()
 
 	// wait for initial render
 	cm.WaitDone(t, 1)
 
-	// TODO: fire webhook
+	// TODO: encapsulate this
+	client := &http.Client{}
+	reader := GetBody()
+	req, err := http.NewRequest("http://0.0.0.0:8090/postreceive", "text/json", reader)
+	if err != nil {
+		t.Fatalf("request creation failed %v", err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Post failed %v", err)
+	}
+	defer resp.Body.Close()
+	_, err = io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("body read failed: %v", err)
+	}
 
 	// wait for webhook triggered render
 	cm.WaitDone(t, 1)
 
-	// TODO: close webhooklisten goroutine via wrapped xxxProvider
-
+	wp.signalDone()
+	exitError := <-waitExit
+	if exitError != nil {
+		t.Fatalf(exitError.Error())
+	}
 }
 
 // TODO this is duplicate code.  Find a way of sharing without cycles between testinternal and jobmanaber
@@ -343,4 +380,118 @@ func createVolumes(jm *kubelayer.KubeSession, t *testing.T) (string, string) {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
 	return sourcePvName, renderPvName
+}
+
+//nolint
+func GetBody() *strings.Reader {
+	//nolint
+	body := `{
+		"ref": "refs/heads/master",
+		"before": "cfbda0818c286970d373bab5e700599e572d3c40",
+		"after": "e2cdd9288b113800293027bc5dae2c7d47b36189",
+		"compare_url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2/compare/cfbda0818c286970d373bab5e700599e572d3c40...e2cdd9288b113800293027bc5dae2c7d47b36189",
+		"commits": [
+		  {
+			"id": "e2cdd9288b113800293027bc5dae2c7d47b36189",
+			"message": "Update 'test.txt'\n",
+			"url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2/commit/e2cdd9288b113800293027bc5dae2c7d47b36189",
+			"author": {
+			  "name": "clarkezone",
+			  "email": "james@clarkezone.io",
+			  "username": "clarkezone"
+			},
+			"committer": {
+			  "name": "clarkezone",
+			  "email": "james@clarkezone.io",
+			  "username": "clarkezone"
+			},
+			"verification": null,
+			"timestamp": "2022-04-10T09:35:51Z",
+			"added": [],
+			"removed": [],
+			"modified": [
+			  "test.txt"
+			]
+		  }
+		],
+		"head_commit": {
+		  "id": "e2cdd9288b113800293027bc5dae2c7d47b36189",
+		  "message": "Update 'test.txt'\n",
+		  "url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2/commit/e2cdd9288b113800293027bc5dae2c7d47b36189",
+		  "author": {
+			"name": "clarkezone",
+			"email": "james@clarkezone.io",
+			"username": "clarkezone"
+		  },
+		  "committer": {
+			"name": "clarkezone",
+			"email": "james@clarkezone.io",
+			"username": "clarkezone"
+		  },
+		  "verification": null,
+		  "timestamp": "2022-04-10T09:35:51Z",
+		  "added": [],
+		  "removed": [],
+		  "modified": [
+			"test.txt"
+		  ]
+		},
+		"repository": {
+		  "id": 1,
+		  "owner": {"id":1,"login":"clarkezone","full_name":"","email":"james@clarkezone.io","avatar_url":"http://gitea.homelab.clarkezone.dev:3000/user/avatar/clarkezone/-1","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2021-11-21T18:43:19Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"clarkezone"},
+		  "name": "testfoobar2",
+		  "full_name": "clarkezone/testfoobar2",
+		  "description": "",
+		  "empty": false,
+		  "private": false,
+		  "fork": false,
+		  "template": false,
+		  "parent": null,
+		  "mirror": false,
+		  "size": 21,
+		  "html_url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2",
+		  "ssh_url": "ssh://git@gitea.homelab.clarkezone.dev:2222/clarkezone/testfoobar2.git",
+		  "clone_url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2.git",
+		  "original_url": "",
+		  "website": "",
+		  "stars_count": 0,
+		  "forks_count": 0,
+		  "watchers_count": 1,
+		  "open_issues_count": 0,
+		  "open_pr_counter": 0,
+		  "release_counter": 0,
+		  "default_branch": "master",
+		  "archived": false,
+		  "created_at": "2021-11-21T18:50:53Z",
+		  "updated_at": "2022-04-10T09:32:02Z",
+		  "permissions": {
+			"admin": true,
+			"push": true,
+			"pull": true
+		  },
+		  "has_issues": true,
+		  "internal_tracker": {
+			"enable_time_tracker": true,
+			"allow_only_contributors_to_track_time": true,
+			"enable_issue_dependencies": true
+		  },
+		  "has_wiki": true,
+		  "has_pull_requests": true,
+		  "has_projects": true,
+		  "ignore_whitespace_conflicts": false,
+		  "allow_merge_commits": true,
+		  "allow_rebase": true,
+		  "allow_rebase_explicit": true,
+		  "allow_squash_merge": true,
+		  "default_merge_style": "merge",
+		  "avatar_url": "",
+		  "internal": false,
+		  "mirror_interval": ""
+		},
+		"pusher": {"id":1,"login":"clarkezone","full_name":"","email":"james@clarkezone.io","avatar_url":"http://gitea.homelab.clarkezone.dev:3000/user/avatar/clarkezone/-1","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2021-11-21T18:43:19Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"clarkezone"},
+		"sender": {"id":1,"login":"clarkezone","full_name":"","email":"james@clarkezone.io","avatar_url":"http://gitea.homelab.clarkezone.dev:3000/user/avatar/clarkezone/-1","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2021-11-21T18:43:19Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"clarkezone"}
+	  }
+	`
+	reader := strings.NewReader(body)
+	return reader
 }
