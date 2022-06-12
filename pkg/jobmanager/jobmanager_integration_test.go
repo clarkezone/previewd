@@ -23,7 +23,7 @@ import (
 )
 
 type CompletionTrackingJobManager struct {
-	wrappedJob jobxxx
+	wrappedJob Jobxxx
 	done       chan bool
 }
 
@@ -61,7 +61,7 @@ func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
 	clarkezoneLog.Debugf("End wait done on mockjobmananger")
 }
 
-func newCompletionTrackingJobManager(towrap jobxxx) *CompletionTrackingJobManager {
+func newCompletionTrackingJobManager(towrap Jobxxx) *CompletionTrackingJobManager {
 	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap}
 	wrapped.done = make(chan bool, 10)
 	return wrapped
@@ -79,9 +79,9 @@ func TestCreateJobE2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
-	wrappedProvider := newCompletionTrackingJobManager(jm.jobProvider)
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider)
 
-	jm.jobProvider = wrappedProvider
+	jm.JobProvider = wrappedProvider
 
 	// Watchers must be started after the provider has been wrapped
 	jm.StartWatchers(true)

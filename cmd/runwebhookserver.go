@@ -210,9 +210,12 @@ func intitializeDependencies(provider providers, webhooklisten bool, initialbuil
 			return err
 		}
 		if webhooklisten || initialbuild {
-			jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
-			if err != nil {
-				return err
+			// possible that integration tests has preconfigured job manager
+			if jm == nil {
+				jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)

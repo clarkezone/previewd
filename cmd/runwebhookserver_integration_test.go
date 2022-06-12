@@ -9,10 +9,12 @@ package cmd
 import (
 	"log"
 	"testing"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 
 	"github.com/clarkezone/previewd/internal"
+	"github.com/clarkezone/previewd/pkg/jobmanager"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 	corev1 "k8s.io/api/core/v1"
@@ -90,6 +92,85 @@ func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 	}
 }
 
+// TOTO this is duplicate code but moving it into internal/testutils creates a cycle
+// between jobmanager integration tests and internal/testutils
+
+func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx) *CompletionTrackingJobManager {
+	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap}
+	wrapped.done = make(chan bool, 10)
+	return wrapped
+}
+
+// TODO: figure out how to share / remove duplicate with jobmanagerintegrationtest
+type CompletionTrackingJobManager struct {
+	wrappedJob jobmanager.Jobxxx
+	done       chan bool
+}
+
+func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
+	image string, command []string, args []string, notifier kubelayer.JobNotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	return o.wrappedJob.CreateJob(name, namespace, image, command,
+		args, notifier, autoDelete, mountlist)
+}
+
+func (o *CompletionTrackingJobManager) DeleteJob(name string, namespace string) error {
+	err := o.wrappedJob.DeleteJob(name, namespace)
+	o.done <- true
+	return err
+}
+
+func (o *CompletionTrackingJobManager) FailedJob(name string, namespace string) {
+	o.wrappedJob.FailedJob(name, namespace)
+	o.done <- true
+}
+
+func (o *CompletionTrackingJobManager) InProgress() bool {
+	return o.wrappedJob.InProgress()
+}
+
+func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
+	clarkezoneLog.Debugf("Begin wait done on mockjobmananger")
+	for i := 0; i < numjobs; i++ {
+		select {
+		case <-o.done:
+		case <-time.After(20 * time.Second):
+			t.Fatalf("No done before 10 second timeout")
+		}
+	}
+	clarkezoneLog.Debugf("End wait done on mockjobmananger")
+}
+
+type e2emockprovider struct {
+	// mock.Mock
+}
+
+func (p *e2emockprovider) initialClone(a string, b string) error {
+	// p.Called(a, b)
+	return nil
+}
+
+func (p *e2emockprovider) initialBuild(a string) error {
+	clarkezoneLog.Debugf("== initial build with '%v'", a)
+	// p.Called(a)
+	return nil
+}
+
+func (p *e2emockprovider) webhookListen() {
+	clarkezoneLog.Debugf("webhookListen")
+	// p.Called()
+}
+
+func (p *e2emockprovider) waitForInterupt() error {
+	clarkezoneLog.Debugf("waitForInterupt")
+	// p.Called()
+	return nil
+}
+
+func (*e2emockprovider) needInitialization() bool {
+	return false
+}
+
 func TestFullE2eTestWithWebhook(t *testing.T) {
 	// launch previewd out of cluster with pre-cloned source valid for jekyll
 	// previewd will create an initial in-cluster renderjob which should succeed
@@ -98,6 +179,9 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	// requires TestCreateJobForClone()
 
 	localdir := t.TempDir()
+
+	var cm *CompletionTrackingJobManager
+	jm, cm = getCompletionTrackingJobManager(t)
 
 	// TODO wrap xxxProvider to hook job completion and waitForInterrupt
 	p := &xxxProvider{}
@@ -117,6 +201,37 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// wait for initial render
+	cm.WaitDone(t, 1)
+
+	// TODO: fire webhook
+
+	// wait for webhook triggered render
+	cm.WaitDone(t, 1)
+
+	// TODO: close webhooklisten goroutine via wrapped xxxProvider
+
+}
+
+// TODO this is duplicate code.  Find a way of sharing without cycles between testinternal and jobmanaber
+func getCompletionTrackingJobManager(t *testing.T) (*jobmanager.Jobmanager, *CompletionTrackingJobManager) {
+	internal.SetupGitRoot()
+	path := internal.GetTestConfigPath(t)
+	config, err := kubelayer.GetConfigOutofCluster(path)
+	if err != nil {
+		t.Fatalf("Can't get config %v", err)
+	}
+	jm, err := jobmanager.Newjobmanager(config, "testns", false, true)
+	if err != nil {
+		t.Fatalf("Can't create jobmanager %v", err)
+	}
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider)
+
+	jm.JobProvider = wrappedProvider
+
+	// Watchers must be started after the provider has been wrapped
+	jm.StartWatchers(true)
+	return jm, wrappedProvider
 }
 
 func prepareEnvironment(t *testing.T) {

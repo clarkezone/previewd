@@ -27,7 +27,8 @@ type jobupdate struct {
 	typee kubelayer.ResourseStateType
 }
 
-type jobxxx interface {
+// Jobxxx is a provider interface for tracking job status
+type Jobxxx interface {
 	CreateJob(name string, namespace string,
 		image string, command []string, args []string, notifier kubelayer.JobNotifier,
 		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
@@ -45,7 +46,9 @@ type Jobmanager struct {
 	monitorExit   chan bool
 	monitorDone   chan bool
 	haveFailedJob bool
-	jobProvider   jobxxx
+	// TODO: is there a better way to avoid test need impacting API shape
+	// JobProvider is public to enable integration tests to modify
+	JobProvider Jobxxx
 }
 
 type kubeJobManager struct {
@@ -106,7 +109,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool,
 	return jm, nil
 }
 
-func newjobmanagerinternal(config *rest.Config, provider jobxxx, namespace string) (*Jobmanager, error) {
+func newjobmanagerinternal(config *rest.Config, provider Jobxxx, namespace string) (*Jobmanager, error) {
 	if config != nil {
 		clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
 	} else {
@@ -122,7 +125,7 @@ func newjobmanagerinternal(config *rest.Config, provider jobxxx, namespace strin
 	}
 
 	jm.addQueue = make(chan jobdescriptor)
-	jm.jobProvider = provider
+	jm.JobProvider = provider
 	jm.namespace = namespace
 	return &jm, nil
 }
@@ -142,11 +145,11 @@ func (jm *Jobmanager) StartWatchers(watchNs bool) error {
 		return err
 	}
 
-	jm.startMonitor(jm.jobProvider)
+	jm.startMonitor(jm.JobProvider)
 	return nil
 }
 
-func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
+func (jm *Jobmanager) startMonitor(jobcontroller Jobxxx) {
 	// TODO ensure monitor isn't already running
 	jobqueue := make([]jobdescriptor, 0)
 	jm.monitorExit = make(chan bool)
@@ -202,7 +205,7 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 }
 
 func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
-	jobcontroller jobxxx, jobnotifierchannel chan *jobupdate) {
+	jobcontroller Jobxxx, jobnotifierchannel chan *jobupdate) {
 	jobQueueLength := len(*jobqueue)
 	jobInProgress := jobcontroller.InProgress()
 	clarkezoneLog.Debugf("scheduleIfPossible called jobqueue length:%v, jobcontroller.InProgress():%v",
