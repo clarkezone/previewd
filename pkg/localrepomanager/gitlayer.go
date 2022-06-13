@@ -88,7 +88,7 @@ func (gl *gitlayer) checkout(branch string) error {
 	var feo *git.FetchOptions
 
 	if gl.pat == "" {
-		feo = &git.FetchOptions{}
+		feo = &git.FetchOptions{Force: true}
 	} else {
 		feo = &git.FetchOptions{
 			Auth: &http.BasicAuth{
@@ -123,7 +123,7 @@ func (gl *gitlayer) pull(branch string) error {
 	var feo *git.PullOptions
 
 	if gl.pat == "" {
-		feo = &git.PullOptions{ReferenceName: nm}
+		feo = &git.PullOptions{ReferenceName: nm, Force: true}
 	} else {
 		feo = &git.PullOptions{
 			ReferenceName: nm,
