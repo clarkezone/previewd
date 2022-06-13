@@ -15,7 +15,7 @@ func SkipCI(t *testing.T) {
 }
 
 func TestSourceDir(t *testing.T) {
-	lrm, err := CreateLocalRepoManager("test", nil, true, nil)
+	lrm, err := CreateLocalRepoManager("test", nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("CreateLRM failed %v", err)
 	}
@@ -33,7 +33,7 @@ func TestSourceDir(t *testing.T) {
 }
 
 func TestCreateLocalRepoManager(t *testing.T) {
-	_, err := CreateLocalRepoManager("test", nil, true, nil)
+	_, err := CreateLocalRepoManager("test", nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("create localrepomanager failed")
 	}
@@ -56,7 +56,7 @@ func TestCreateLocalRepoManager(t *testing.T) {
 
 func TestLegalizeBranchName(t *testing.T) {
 	const branchname = "foo"
-	lrm, err := CreateLocalRepoManager("test", nil, true, nil)
+	lrm, err := CreateLocalRepoManager("test", nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("create localrepomanager failed")
 	}
@@ -82,7 +82,7 @@ func TestLegalizeBranchName(t *testing.T) {
 }
 
 func TestGetCurrentBranchRender(t *testing.T) {
-	lrm, err := CreateLocalRepoManager("test", nil, true, nil)
+	lrm, err := CreateLocalRepoManager("test", nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("create localrepomanager failed")
 	}
@@ -111,7 +111,7 @@ func TestLRMCheckout(t *testing.T) {
 	//nolint
 	repo, dirname, _, _, _ := internal.Getenv(t)
 
-	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
+	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("create localrepomanager failed")
 	}
@@ -130,7 +130,7 @@ func TestLRMCheckout(t *testing.T) {
 func TestLRMSwitchBranch(t *testing.T) {
 	repo, dirname, branch, _, _ := internal.Getenv(t)
 
-	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
+	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("create localrepomanager failed")
 	}
@@ -155,7 +155,7 @@ func TestLRMSwitchBranchBadBranch(t *testing.T) {
 	//nolint
 	repo, dirname, _, _, _ := internal.Getenv(t)
 
-	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil)
+	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil, "")
 	if err != nil {
 		t.Fatalf("create localrepomanager failed")
 	}
