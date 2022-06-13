@@ -210,10 +210,11 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 
 	// targetrepo and localdir are unused as no initial clone
 	// webhook will run job in cluster
-	cmd.SetArgs([]string{"--targetrepo=http://foo",
+	// NOTE: no intialclone blows things up due to nil repomanager
+	cmd.SetArgs([]string{"--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git",
 		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=testns",
-		"--initialclone=false",
-		"--initialbuild=false", "--webhooklisten=true"})
+		"--initialclone=true",
+		"--initialbuild=true", "--webhooklisten=true"})
 
 	waitExit := make(chan error)
 	go func() {
@@ -244,7 +245,7 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	}
 
 	// wait for webhook triggered render
-	cm.WaitDone(t, 1)
+	cm.WaitDone(t, 2)
 
 	wp.signalDone()
 	exitError := <-waitExit
