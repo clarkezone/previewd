@@ -8,6 +8,7 @@ import (
 
 	"github.com/clarkezone/previewd/internal"
 	"github.com/clarkezone/previewd/pkg/jobmanager"
+	"github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
 
@@ -123,6 +124,7 @@ func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 //nolint
 //lint:ignore U1000 called commented out
 func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotify bool) error {
+	clarkezoneLog.Debugf("LocalRepoManager::HandleWebhook branch: %v", branch)
 	err := lrm.SwitchBranch(branch)
 	if err != nil {
 		clarkezoneLog.Errorf("LocalRepoManager::HandleWebhook %v", err)
@@ -144,15 +146,34 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 }
 
 func (lrm *LocalRepoManager) startJob() {
+	// TODO extract job creation code into internal
 	if lrm.jm == nil {
 		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
 		return
 	}
-	// TODO: eliminate constant
+	const rendername = "render"
+	const sourcename = "source"
+	render, err := lrm.jm.KubeSession().FindpvClaimByName(rendername, lrm.kubenamespace)
+	if err != nil {
+		clarkezoneLog.Errorf("lrm::startJob () can't find pvcalim render %v", err)
+	}
+	if render == "" {
+		clarkezoneLog.Errorf("ltm::startjob() render name empty")
+	}
+	source, err := lrm.jm.KubeSession().FindpvClaimByName(sourcename, lrm.kubenamespace)
+	if err != nil {
+		clarkezoneLog.Errorf("lrm::startjob() can't find pvcalim source %v", err)
+	}
+	if source == "" {
+		clarkezoneLog.Errorf("lrm::startjob() source name empty")
+	}
+	renderref := lrm.jm.KubeSession().CreatePvCMountReference(render, "/site", false)
+	srcref := lrm.jm.KubeSession().CreatePvCMountReference(source, "/src", false)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 	imagePath := internal.GetJekyllImage()
 
 	command, params := internal.GetJekyllCommands()
-	err := lrm.jm.AddJobtoQueue("jekyll-render-container", lrm.kubenamespace, imagePath, command, params, nil)
+	err = lrm.jm.AddJobtoQueue("jekyll-render-container", lrm.kubenamespace, imagePath, command, params, refs)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
 	}
