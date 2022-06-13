@@ -24,16 +24,18 @@ type LocalRepoManager struct {
 	newBranchObs     newBranchHandler
 	enableBranchMode bool
 	jm               *jobmanager.Jobmanager
+	kubenamespace    string
 }
 
 // CreateLocalRepoManager is a factory method for creating a new LRM instance
 func CreateLocalRepoManager(rootDir string,
 	newBranch newBranchHandler, enableBranchMode bool,
-	jm *jobmanager.Jobmanager) (*LocalRepoManager, error) {
+	jm *jobmanager.Jobmanager, namespace string) (*LocalRepoManager, error) {
 	var lrm = &LocalRepoManager{currentBranch: "master", localRootDir: rootDir}
 	lrm.newBranchObs = newBranch
 	lrm.enableBranchMode = enableBranchMode
 	lrm.jm = jm
+	lrm.kubenamespace = namespace
 	// TODO: replace with an error check for missing dir
 	//nolint
 	os.RemoveAll(rootDir) // ignore error since it may not exist
@@ -147,11 +149,10 @@ func (lrm *LocalRepoManager) startJob() {
 		return
 	}
 	// TODO: eliminate constant
-	namespace := "jekyllpreviewv2"
 	imagePath := internal.GetJekyllImage()
 
 	command, params := internal.GetJekyllCommands()
-	err := lrm.jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command, params, nil)
+	err := lrm.jm.AddJobtoQueue("jekyll-render-container", lrm.kubenamespace, imagePath, command, params, nil)
 	if err != nil {
 		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
 	}

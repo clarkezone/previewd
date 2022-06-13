@@ -88,7 +88,7 @@ func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git",
 		"--localdir=/src", " --initialclone=false",
-		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
+		"--initialbuild=false", "--webhooklisten=true", "--loglevel=debug"}
 	_, err := ks.CreateJob("rendertopv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
@@ -98,8 +98,9 @@ func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 // TOTO this is duplicate code but moving it into internal/testutils creates a cycle
 // between jobmanager integration tests and internal/testutils
 
-func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx) *CompletionTrackingJobManager {
-	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap}
+func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx, inter int) *CompletionTrackingJobManager {
+	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap, waitFor: inter}
+
 	wrapped.done = make(chan bool, 10)
 	return wrapped
 }
@@ -108,6 +109,7 @@ func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx) *CompletionTracki
 type CompletionTrackingJobManager struct {
 	wrappedJob jobmanager.Jobxxx
 	done       chan bool
+	waitFor    int
 }
 
 func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
@@ -137,8 +139,8 @@ func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
 	for i := 0; i < numjobs; i++ {
 		select {
 		case <-o.done:
-		case <-time.After(20 * time.Second):
-			t.Fatalf("No done before 10 second timeout")
+		case <-time.After(time.Duration(o.waitFor) * time.Second):
+			t.Fatalf("No done before %v second timeout", o.waitFor)
 		}
 	}
 	clarkezoneLog.Debugf("End wait done on mockjobmananger")
@@ -211,7 +213,7 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	cmd.SetArgs([]string{"--targetrepo=http://foo",
 		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=testns",
 		"--initialclone=false",
-		"--initialbuild=true", "--webhooklisten=true"})
+		"--initialbuild=false", "--webhooklisten=true"})
 
 	waitExit := make(chan error)
 	go func() {
@@ -221,12 +223,13 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	}()
 
 	// wait for initial render
-	cm.WaitDone(t, 1)
+	//TODO renable render
+	//cm.WaitDone(t, 1)
 
 	// TODO: encapsulate this
 	client := &http.Client{}
 	reader := GetBody()
-	req, err := http.NewRequest("http://0.0.0.0:8090/postreceive", "text/json", reader)
+	req, err := http.NewRequest("POST", "http://0.0.0.0:8090/postreceive", reader)
 	if err != nil {
 		t.Fatalf("request creation failed %v", err)
 	}
@@ -262,7 +265,7 @@ func getCompletionTrackingJobManager(t *testing.T) (*jobmanager.Jobmanager, *Com
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
-	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider)
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider, 60)
 
 	jm.JobProvider = wrappedProvider
 

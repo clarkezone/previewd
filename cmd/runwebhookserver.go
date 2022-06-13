@@ -218,7 +218,7 @@ func intitializeDependencies(provider providers, webhooklisten bool, initialbuil
 				}
 			}
 		}
-		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
+		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm, namespace)
 		if err != nil {
 			clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
 			return err
