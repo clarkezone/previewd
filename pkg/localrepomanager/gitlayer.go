@@ -37,7 +37,7 @@ func clone(repo string, localfolder string) (*gitlayer, error) {
 }
 
 func doClone(gl *gitlayer, localfolder string, clo *git.CloneOptions) error {
-	re, err := git.PlainClone(localfolder, false, clo)
+	re, err := git.PlainClone(localfolder, true, clo)
 	if err != nil {
 		clarkezoneLog.Errorf("Plainclone %v\n", err.Error())
 		return err
