@@ -33,8 +33,8 @@ type LocalRepoManager struct {
 func CreateLocalRepoManager(rootDir string,
 	newBranch newBranchHandler, enableBranchMode bool,
 	jm *jobmanager.Jobmanager, namespace string) (*LocalRepoManager, error) {
-
-	clarkezoneLog.Debugf("CreateLocalRepoManager rootDir:%v, newBarnch:%v, enableBranchMode:%v, currentBranch:Master, namespace:%v",
+	clarkezoneLog.Debugf("CreateLocalRepoManager rootDir:%v, newBarnch:%v, enableBranchMode:%v,"+
+		" currentBranch:Master, namespace:%v",
 		rootDir, newBranch, enableBranchMode, namespace)
 	var lrm = &LocalRepoManager{currentBranch: "master", localRootDir: rootDir}
 	lrm.newBranchObs = newBranch
