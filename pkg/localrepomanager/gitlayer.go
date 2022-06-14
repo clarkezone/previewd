@@ -106,7 +106,7 @@ func (gl *gitlayer) checkout(branch string) error {
 
 	nm := plumbing.NewRemoteReferenceName(remote.Config().Name, branch)
 
-	fmt.Printf("Checking out new branch %v\n", nm)
+	fmt.Printf("Checking out new branch %v with force", nm)
 	err = gl.wt.Checkout(&git.CheckoutOptions{Branch: nm, Force: true})
 
 	if err != nil {

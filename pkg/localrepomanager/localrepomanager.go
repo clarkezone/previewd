@@ -32,6 +32,9 @@ type LocalRepoManager struct {
 func CreateLocalRepoManager(rootDir string,
 	newBranch newBranchHandler, enableBranchMode bool,
 	jm *jobmanager.Jobmanager, namespace string) (*LocalRepoManager, error) {
+
+	clarkezoneLog.Debugf("CreateLocalRepoManager rootDir:%v, newBarnch:%v, enableBranchMode:%v, currentBranch:Master, namespace:%v",
+		rootDir, newBranch, enableBranchMode, namespace)
 	var lrm = &LocalRepoManager{currentBranch: "master", localRootDir: rootDir}
 	lrm.newBranchObs = newBranch
 	lrm.enableBranchMode = enableBranchMode
@@ -82,7 +85,7 @@ func (lrm *LocalRepoManager) legalizeBranchName(name string) string {
 // InitialClone performs clone on given repo
 func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 	//TODO: this function should ensure branch name is correct
-	clarkezoneLog.Infof("Initial clone for\n repo: %v\n local dir:%v", repo, lrm.repoSourceDir)
+	clarkezoneLog.Debugf("Initial clone for\n repo: %v\n local dir:%v", repo, lrm.repoSourceDir)
 	if repopat != "" {
 		clarkezoneLog.Debugf(" with Personal Access Token.\n")
 	} else {
@@ -102,11 +105,11 @@ func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 // SwitchBranch changes to a new branch on current repo
 func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 	if branch != lrm.currentBranch {
-		clarkezoneLog.Infof("Fetching\n")
+		clarkezoneLog.Debugf("Switching branch befween current %v and %v", lrm.currentBranch, branch)
 
 		err := lrm.repo.checkout(branch)
 		if err != nil {
-			clarkezoneLog.Errorf("LocalRepoManager::Switchbranch %v", err)
+			clarkezoneLog.Errorf("LocalRepoManager::Switchbranch checkout failed %v", err)
 			return err
 		}
 
@@ -115,7 +118,7 @@ func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 
 	err := lrm.repo.pull(branch)
 	if err != nil {
-		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch %v", err)
+		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch pull failed for %v with %v", branch, err)
 		return err
 	}
 	return nil
