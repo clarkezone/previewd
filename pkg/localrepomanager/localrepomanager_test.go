@@ -176,6 +176,35 @@ func TestLRMSwitchBranchBadBranch(t *testing.T) {
 	}
 }
 
+// func TestLRMSwitchBranchViaWebhook(t *testing.T) {
+// 	// repo, dirname, _, _, _ := internal.Getenv(t)
+// 	repo := "https://github.com/clarkezone/previewd.git"
+//
+// 	dirname := t.TempDir()
+//
+// 	lrm, err := CreateLocalRepoManager(dirname, nil, true, nil, "")
+// 	if err != nil {
+// 		t.Fatalf("create localrepomanager failed")
+// 	}
+//
+// 	err = lrm.InitialClone(repo, "")
+// 	if err != nil {
+// 		t.Fatalf("error in initial clonse")
+// 	}
+//
+// 	// TODO mutate a file
+//
+// 	err = lrm.HandleWebhook("webhooke2e", true, true)
+// 	if err != nil {
+// 		t.Fatalf("switch branch failed")
+// 	}
+//
+// 	err = os.RemoveAll(dirname)
+// 	if err != nil {
+// 		t.Fatalf("unable to remove dirs")
+// 	}
+// }
+
 // TODO unregister
 
 // func TestLRMSwitchBranch(t *testing.T) {

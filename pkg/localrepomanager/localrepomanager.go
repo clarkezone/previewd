@@ -10,6 +10,7 @@ import (
 	"github.com/clarkezone/previewd/pkg/jobmanager"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/go-git/go-git/v5"
 )
 
 type newBranchHandler interface {
@@ -104,6 +105,14 @@ func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 
 // SwitchBranch changes to a new branch on current repo
 func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
+	clarkezoneLog.Debugf("SwitchingBranch: resetting with hard")
+	re := git.ResetOptions{Mode: git.HardReset}
+	err := lrm.repo.wt.Reset(&re)
+	if err != nil {
+		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch reset failed with %v", err)
+		return err
+	}
+
 	if branch != lrm.currentBranch {
 		clarkezoneLog.Debugf("Switching branch befween current %v and %v", lrm.currentBranch, branch)
 
@@ -116,7 +125,7 @@ func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 		lrm.currentBranch = branch
 	}
 
-	err := lrm.repo.pull(branch)
+	err = lrm.repo.pull(branch)
 	if err != nil {
 		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch pull failed for %v with %v", branch, err)
 		return err
