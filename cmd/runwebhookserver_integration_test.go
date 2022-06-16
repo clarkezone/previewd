@@ -7,9 +7,7 @@
 package cmd
 
 import (
-	"io"
 	"log"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -98,54 +96,6 @@ func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 // TOTO this is duplicate code but moving it into internal/testutils creates a cycle
 // between jobmanager integration tests and internal/testutils
 
-func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx, inter int) *CompletionTrackingJobManager {
-	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap, waitFor: inter}
-
-	wrapped.done = make(chan bool, 10)
-	return wrapped
-}
-
-// TODO: figure out how to share / remove duplicate with jobmanagerintegrationtest
-type CompletionTrackingJobManager struct {
-	wrappedJob jobmanager.Jobxxx
-	done       chan bool
-	waitFor    int
-}
-
-func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
-	image string, command []string, args []string, notifier kubelayer.JobNotifier,
-	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
-	return o.wrappedJob.CreateJob(name, namespace, image, command,
-		args, notifier, autoDelete, mountlist)
-}
-
-func (o *CompletionTrackingJobManager) DeleteJob(name string, namespace string) error {
-	err := o.wrappedJob.DeleteJob(name, namespace)
-	o.done <- true
-	return err
-}
-
-func (o *CompletionTrackingJobManager) FailedJob(name string, namespace string) {
-	o.wrappedJob.FailedJob(name, namespace)
-	o.done <- true
-}
-
-func (o *CompletionTrackingJobManager) InProgress() bool {
-	return o.wrappedJob.InProgress()
-}
-
-func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
-	clarkezoneLog.Debugf("Begin wait done on mockjobmananger")
-	for i := 0; i < numjobs; i++ {
-		select {
-		case <-o.done:
-		case <-time.After(time.Duration(o.waitFor) * time.Second):
-			t.Fatalf("No done before %v second timeout", o.waitFor)
-		}
-	}
-	clarkezoneLog.Debugf("End wait done on mockjobmananger")
-}
-
 type e2emockprovider struct {
 	// mock.Mock
 	doneChan        chan struct{}
@@ -223,35 +173,23 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 		close(waitExit)
 	}()
 
-	// wait for initial render
-	//TODO renable render
-	//cm.WaitDone(t, 1)
+	cm.WaitDone(t, 3)
 
-	// TODO: encapsulate this
-	client := &http.Client{}
-	reader := GetBody()
-	req, err := http.NewRequest("POST", "http://0.0.0.0:8090/postreceive", reader)
-	if err != nil {
-		t.Fatalf("request creation failed %v", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("Post failed %v", err)
-	}
-	defer resp.Body.Close()
-	_, err = io.ReadAll(resp.Body)
+	err := lrm.HandleWebhook("main", true, false)
 	if err != nil {
 		t.Fatalf("body read failed: %v", err)
 	}
 
 	// wait for webhook triggered render
-	cm.WaitDone(t, 2)
+	cm.WaitDone(t, 3)
 
 	wp.signalDone()
 	exitError := <-waitExit
 	if exitError != nil {
 		t.Fatalf(exitError.Error())
 	}
+
+	// TODO: use mock to verify calls to completiontrackingjobmanager
 }
 
 // TODO this is duplicate code.  Find a way of sharing without cycles between testinternal and jobmanaber
@@ -266,7 +204,7 @@ func getCompletionTrackingJobManager(t *testing.T) (*jobmanager.Jobmanager, *Com
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
-	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider, 60)
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider.(jobmanager.Jobxxx), 60)
 
 	jm.JobProvider = wrappedProvider
 
@@ -498,4 +436,52 @@ func GetBody() *strings.Reader {
 	`
 	reader := strings.NewReader(body)
 	return reader
+}
+
+type CompletionTrackingJobManager struct {
+	wrappedJob      jobmanager.Jobxxx
+	done            chan bool
+	timeoutinterval int
+}
+
+func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
+	image string, command []string, args []string, notifier kubelayer.JobNotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	return o.wrappedJob.CreateJob(name, namespace, image, command,
+		args, notifier, autoDelete, mountlist)
+}
+
+func (o *CompletionTrackingJobManager) DeleteJob(name string, namespace string) error {
+	err := o.wrappedJob.DeleteJob(name, namespace)
+	o.done <- true
+	return err
+}
+
+func (o *CompletionTrackingJobManager) FailedJob(name string, namespace string) {
+	o.wrappedJob.FailedJob(name, namespace)
+	o.done <- true
+}
+
+func (o *CompletionTrackingJobManager) InProgress() bool {
+	return o.wrappedJob.InProgress()
+}
+
+func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
+	clarkezoneLog.Debugf("Begin wait done on mockjobmananger")
+	for i := 0; i < numjobs; i++ {
+		select {
+		case <-o.done:
+			clarkezoneLog.Debugf("WaitDone: o done received")
+		case <-time.After(time.Duration(o.timeoutinterval) * time.Second):
+			t.Fatalf("No done before %v second timeout", o.timeoutinterval)
+		}
+	}
+	clarkezoneLog.Debugf("End wait done on mockjobmananger")
+}
+
+func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx, timeout int) *CompletionTrackingJobManager {
+	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap}
+	wrapped.timeoutinterval = timeout
+	wrapped.done = make(chan bool)
+	return wrapped
 }
