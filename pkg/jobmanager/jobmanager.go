@@ -7,6 +7,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/rest"
 
+	"github.com/clarkezone/previewd/internal"
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -277,4 +278,35 @@ func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
 		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
 	clarkezoneLog.Debugf(" addjobtoqueue: end add job descriptor to jm.addQueue channel")
 	return nil
+}
+
+// CreateJekyllJob creates a render job using Jekyll
+func CreateJekyllJob(ns string, ks *kubelayer.KubeSession, jm *Jobmanager) error {
+	const rendername = "render"
+	const sourcename = "source"
+	render, err := ks.FindpvClaimByName(rendername, ns)
+	if err != nil {
+		clarkezoneLog.Errorf("CreateJekyllJob can't find pvcalim render %v", err)
+	}
+	if render == "" {
+		clarkezoneLog.Errorf("CreateJekyllJob render name empty")
+	}
+	source, err := ks.FindpvClaimByName(sourcename, ns)
+	if err != nil {
+		clarkezoneLog.Errorf("CreateJekyllJob can't find pvcalim source %v", err)
+	}
+	if source == "" {
+		clarkezoneLog.Errorf("CreateJekyllJob source name empty")
+	}
+	renderref := ks.CreatePvCMountReference(render, "/site", false)
+	srcref := ks.CreatePvCMountReference(source, "/src", false)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
+	imagePath := internal.GetJekyllImage()
+
+	command, params := internal.GetJekyllCommands()
+	err = jm.AddJobtoQueue("jekyll-render-container", ns, imagePath, command, params, refs)
+	if err != nil {
+		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
+	}
+	return err
 }

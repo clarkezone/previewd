@@ -30,6 +30,7 @@ const (
 
 func TestSetupEnvironment(t *testing.T) {
 	prepareEnvironment(t)
+	// TODO: wait
 }
 
 func TestCreateJobForClone(t *testing.T) {
@@ -93,55 +94,6 @@ func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 	}
 }
 
-// TOTO this is duplicate code but moving it into internal/testutils creates a cycle
-// between jobmanager integration tests and internal/testutils
-
-type e2emockprovider struct {
-	// mock.Mock
-	doneChan        chan struct{}
-	wrappedProvider providers
-}
-
-func newE2mockprovider(p providers) *e2emockprovider {
-	provider := e2emockprovider{}
-	provider.doneChan = make(chan struct{})
-	provider.wrappedProvider = p
-	return &provider
-}
-
-func (p *e2emockprovider) initialClone(a string, b string) error {
-	// p.Called(a, b)
-	clarkezoneLog.Debugf("initialClone with %v and %v", a, b)
-	return p.wrappedProvider.initialClone(a, b)
-}
-
-func (p *e2emockprovider) initialBuild(a string) error {
-	clarkezoneLog.Debugf("== initial build with '%v'", a)
-	// p.Called(a)
-	return p.wrappedProvider.initialBuild(a)
-}
-
-func (p *e2emockprovider) webhookListen() {
-	clarkezoneLog.Debugf("webhookListen")
-	p.wrappedProvider.webhookListen()
-}
-
-func (p *e2emockprovider) waitForInterupt() error {
-	clarkezoneLog.Debugf("waitForInterupt")
-	// p.Called()
-	<-p.doneChan
-	return nil
-}
-
-func (p *e2emockprovider) needInitialization() bool {
-	clarkezoneLog.Debugf("needInitialization")
-	return p.wrappedProvider.needInitialization()
-}
-
-func (p *e2emockprovider) signalDone() {
-	close(p.doneChan)
-}
-
 func TestFullE2eTestWithWebhook(t *testing.T) {
 	// launch previewd out of cluster with pre-cloned source valid for jekyll
 	// previewd will create an initial in-cluster renderjob which should succeed
@@ -190,6 +142,55 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	}
 
 	// TODO: use mock to verify calls to completiontrackingjobmanager
+}
+
+// TOTO this is duplicate code but moving it into internal/testutils creates a cycle
+// between jobmanager integration tests and internal/testutils
+
+type e2emockprovider struct {
+	// mock.Mock
+	doneChan        chan struct{}
+	wrappedProvider providers
+}
+
+func newE2mockprovider(p providers) *e2emockprovider {
+	provider := e2emockprovider{}
+	provider.doneChan = make(chan struct{})
+	provider.wrappedProvider = p
+	return &provider
+}
+
+func (p *e2emockprovider) initialClone(a string, b string) error {
+	// p.Called(a, b)
+	clarkezoneLog.Debugf("initialClone with %v and %v", a, b)
+	return p.wrappedProvider.initialClone(a, b)
+}
+
+func (p *e2emockprovider) initialBuild(a string) error {
+	clarkezoneLog.Debugf("== initial build with '%v'", a)
+	// p.Called(a)
+	return p.wrappedProvider.initialBuild(a)
+}
+
+func (p *e2emockprovider) webhookListen() {
+	clarkezoneLog.Debugf("webhookListen")
+	p.wrappedProvider.webhookListen()
+}
+
+func (p *e2emockprovider) waitForInterupt() error {
+	clarkezoneLog.Debugf("waitForInterupt")
+	// p.Called()
+	<-p.doneChan
+	return nil
+}
+
+func (p *e2emockprovider) needInitialization() bool {
+	clarkezoneLog.Debugf("needInitialization")
+	return p.wrappedProvider.needInitialization()
+}
+
+func (p *e2emockprovider) signalDone() {
+	close(p.doneChan)
 }
 
 // TODO this is duplicate code.  Find a way of sharing without cycles between testinternal and jobmanaber

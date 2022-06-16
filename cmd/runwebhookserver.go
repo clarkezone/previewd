@@ -6,7 +6,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 
@@ -254,39 +253,7 @@ func (xxxProvider) waitForInterupt() error {
 
 func (xxxProvider) initialBuild(namespace string) error {
 	clarkezoneLog.Debugf("initialbuild() with namespace %v", namespace)
-	const rendername = "render"
-	const sourcename = "source"
-	render, err := jm.KubeSession().FindpvClaimByName(rendername, namespace)
-	if err != nil {
-		clarkezoneLog.Errorf("initialBuild() can't find pvcalim render %v", err)
-		return err
-	}
-	if render == "" {
-		clarkezoneLog.Errorf("initialBuild() render name empty")
-		return fmt.Errorf("initialBuild() render name empty")
-	}
-	source, err := jm.KubeSession().FindpvClaimByName(sourcename, namespace)
-	if err != nil {
-		clarkezoneLog.Errorf("initialBuild() can't find pvcalim source %v", err)
-		return err
-	}
-	if source == "" {
-		clarkezoneLog.Errorf("initialBuild() source name empty")
-		return fmt.Errorf("initialBuild() source name empty")
-	}
-	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
-	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", false)
-	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := internal.GetJekyllImage()
-	command, params := internal.GetJekyllCommands()
-	clarkezoneLog.Debugf("initialBuild() submitting job namespace:%v, imagePath:%v, command:%v, pararms:%v, refs:%v",
-		namespace, imagePath, command, params, refs)
-	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
-		params, refs)
-	if err != nil {
-		clarkezoneLog.Errorf("Failed to create job: %v", err.Error())
-	}
-	return nil
+	return jobmanager.CreateJekyllJob(namespace, jm.KubeSession(), jm)
 }
 
 func init() {
