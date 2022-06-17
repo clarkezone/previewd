@@ -2,15 +2,13 @@
 package localrepomanager
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path"
 	"regexp"
-	"runtime"
 
 	"github.com/clarkezone/previewd/pkg/jobmanager"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/go-git/go-git/v5"
 )
 
 type newBranchHandler interface {
@@ -26,16 +24,21 @@ type LocalRepoManager struct {
 	newBranchObs     newBranchHandler
 	enableBranchMode bool
 	jm               *jobmanager.Jobmanager
+	kubenamespace    string
 }
 
 // CreateLocalRepoManager is a factory method for creating a new LRM instance
 func CreateLocalRepoManager(rootDir string,
 	newBranch newBranchHandler, enableBranchMode bool,
-	jm *jobmanager.Jobmanager) (*LocalRepoManager, error) {
+	jm *jobmanager.Jobmanager, namespace string) (*LocalRepoManager, error) {
+	clarkezoneLog.Debugf("CreateLocalRepoManager rootDir:%v, newBarnch:%v, enableBranchMode:%v,"+
+		" currentBranch:Master, namespace:%v",
+		rootDir, newBranch, enableBranchMode, namespace)
 	var lrm = &LocalRepoManager{currentBranch: "master", localRootDir: rootDir}
 	lrm.newBranchObs = newBranch
 	lrm.enableBranchMode = enableBranchMode
 	lrm.jm = jm
+	lrm.kubenamespace = namespace
 	// TODO: replace with an error check for missing dir
 	//nolint
 	os.RemoveAll(rootDir) // ignore error since it may not exist
@@ -81,7 +84,7 @@ func (lrm *LocalRepoManager) legalizeBranchName(name string) string {
 // InitialClone performs clone on given repo
 func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 	//TODO: this function should ensure branch name is correct
-	clarkezoneLog.Infof("Initial clone for\n repo: %v\n local dir:%v", repo, lrm.repoSourceDir)
+	clarkezoneLog.Debugf("Initial clone for\n repo: %v\n local dir:%v", repo, lrm.repoSourceDir)
 	if repopat != "" {
 		clarkezoneLog.Debugf(" with Personal Access Token.\n")
 	} else {
@@ -100,29 +103,37 @@ func (lrm *LocalRepoManager) InitialClone(repo string, repopat string) error {
 
 // SwitchBranch changes to a new branch on current repo
 func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
+	clarkezoneLog.Debugf("SwitchingBranch: resetting with hard")
+	re := git.ResetOptions{Mode: git.HardReset}
+	err := lrm.repo.wt.Reset(&re)
+	if err != nil {
+		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch reset failed with %v", err)
+		return err
+	}
+
 	if branch != lrm.currentBranch {
-		clarkezoneLog.Infof("Fetching\n")
+		clarkezoneLog.Debugf("Switching branch befween current %v and %v", lrm.currentBranch, branch)
 
 		err := lrm.repo.checkout(branch)
 		if err != nil {
-			clarkezoneLog.Errorf("LocalRepoManager::Switchbranch %v", err)
+			clarkezoneLog.Errorf("LocalRepoManager::Switchbranch checkout failed %v", err)
 			return err
 		}
 
 		lrm.currentBranch = branch
 	}
 
-	err := lrm.repo.pull(branch)
+	err = lrm.repo.pull(branch)
 	if err != nil {
-		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch %v", err)
+		clarkezoneLog.Errorf("LocalRepoManager::SwitchBranch pull failed for %v with %v", branch, err)
 		return err
 	}
 	return nil
 }
 
-//nolint
-//lint:ignore U1000 called commented out
-func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotify bool) error {
+// HandleWebhook called by webhook machinery to trigger new job
+func (lrm *LocalRepoManager) HandleWebhook(branch string, sendNotify bool) error {
+	clarkezoneLog.Debugf("LocalRepoManager::HandleWebhook branch: %v", branch)
 	err := lrm.SwitchBranch(branch)
 	if err != nil {
 		clarkezoneLog.Errorf("LocalRepoManager::HandleWebhook %v", err)
@@ -134,34 +145,15 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 		clarkezoneLog.Errorf("LocalRepoManager::HandleWebhook %v", err)
 		return err
 	}
-	// todo handle branch change
-	lrm.startJob()
+
+	if lrm.jm == nil {
+		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
+	} else {
+		err = jobmanager.CreateJekyllJob(lrm.kubenamespace, lrm.jm.KubeSession(), lrm.jm)
+	}
 
 	if lrm.enableBranchMode && sendNotify && lrm.newBranchObs != nil {
 		lrm.newBranchObs.NewBranch(lrm.legalizeBranchName(branch), renderDir)
 	}
-	return nil
-}
-
-// nolint
-func (lrm *LocalRepoManager) startJob() {
-	if lrm.jm == nil {
-		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
-		return
-	}
-	namespace := "jekyllpreviewv2"
-	var imagePath string
-	fmt.Printf("%v", runtime.GOARCH)
-	if runtime.GOARCH == "amd64" {
-		imagePath = "registry.hub.docker.com/clarkezone/jekyllbuilder:0.0.1.8"
-	} else {
-		imagePath = "registry.dev.clarkezone.dev/jekyllbuilder:arm"
-	}
-	command := []string{"sh", "-c", "--"}
-	params := []string{"cd source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	log.Fatalf("fix this")
-	err := lrm.jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command, params, nil)
-	if err != nil {
-		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
-	}
+	return err
 }

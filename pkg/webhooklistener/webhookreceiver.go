@@ -73,7 +73,7 @@ func (wl *WebhookListener) getHookProcessor() func() {
 					clarkezoneLog.Debugf("WebhookListener: Webhook event ignored as lrm is not initialized")
 					break
 				}
-				err := wl.lrm.HandleWebhook(event.Branch, wl.initialBuild, wl.initialBuild)
+				err := wl.lrm.HandleWebhook(event.Branch, wl.initialBuild)
 				if err != nil {
 					clarkezoneLog.Errorf("WebhookListener:HandleWebhook failed:%v", err)
 				}

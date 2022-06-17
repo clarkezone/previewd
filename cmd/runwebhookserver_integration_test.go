@@ -9,41 +9,57 @@ package cmd
 import (
 	"log"
 	"testing"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 
 	"github.com/clarkezone/previewd/internal"
+	"github.com/clarkezone/previewd/pkg/jobmanager"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	renderPvName  = "render"
-	sourcePvName  = "source"
-	testNamespace = "testns"
+	renderPvName      = "render"
+	sourcePvName      = "source"
+	testNamespace     = "testns"
+	previewdImagePath = "registry.hub.docker.com/clarkezone/previewd:0.0.3"
+	testRepo          = "https://github.com/clarkezone/selfhostinfrablog.git"
 )
 
 func TestSetupEnvironment(t *testing.T) {
-	prepareEnvironment(t)
+	ks := getKubeSession(t)
+	wait := make(chan bool)
+	ks.CreateNamespace(testNamespace, func(ns *corev1.Namespace, rt kubelayer.ResourseStateType) {
+		if rt == kubelayer.Create {
+			wait <- true
+		}
+	})
+	<-wait
+	_, _ = createVolumes(ks, t)
 }
 
 func TestCreateJobForClone(t *testing.T) {
 	ks := getKubeSession(t)
+	completechannel, deletechannel, notifier := getNotifier()
 
 	// create job to launch clone only previewd with persistent volumes bound
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
-	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git", "--localdir=/src", " --initialclone=true",
+	args := []string{"runwebhookserver", "--targetrepo=" + testRepo, "--localdir=/src", " --initialclone=true",
 		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
-	_, err := ks.CreateJob("populatepv", testNamespace, imagePath, cmd, args, nil, false, refs)
-	if err != nil {
-		t.Fatalf("create job failed: %v", err)
+
+	outputjob := runTestJod(ks, "populatepv", testNamespace,
+		previewdImagePath,
+		completechannel, deletechannel, t, cmd, args, notifier, refs)
+
+	if outputjob.Status.Succeeded != 1 {
+		t.Fatalf("Jobs didn't succeed")
 	}
-	// TODO wait for job to complete
 }
 
 func TestCreateJobTestServerMountVols(t *testing.T) {
@@ -55,15 +71,15 @@ func TestCreateJobUsinsingPreparedJekyll(t *testing.T) {
 	ks := getKubeSession(t)
 	completechannel, deletechannel, notifier := getNotifier()
 
-	// create job to launch clone only previewd with persistent volumes bound
+	// create job to render using jekyll docker image from prepared source
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 
 	// cmd := []string{"sh", "-c", "--"}
 	// params := []string{"sleep 100000"}
-	cmd, params := getJekyllCommands()
-	image := getJekyllImage()
+	cmd, params := internal.GetJekyllCommands()
+	image := internal.GetJekyllImage()
 
 	outputjob := runTestJod(ks, "jekyllrender", testNamespace,
 		image,
@@ -76,59 +92,161 @@ func TestCreateJobUsinsingPreparedJekyll(t *testing.T) {
 
 func TestCreateJobRenderSimulateK8sDeployment(t *testing.T) {
 	ks := getKubeSession(t)
-	// create job to launch clone only previewd with persistent volumes bound
+	// create a job that launches previewd in cluster perferming initial build
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git",
 		"--localdir=/src", " --initialclone=false",
-		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
-	_, err := ks.CreateJob("rendertopv", testNamespace, imagePath, cmd, args, nil, false, refs)
+		"--initialbuild=false", "--webhooklisten=true", "--loglevel=debug"}
+	_, err := ks.CreateJob("rendertopv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
 	}
 }
 
-func TestRunWebhookServercmd(t *testing.T) {
-	// ? can this work because stuff isn't cloned
+func TestFullE2eTestWithWebhook(t *testing.T) {
+	// launch previewd out of cluster with pre-cloned source valid for jekyll
+	// previewd will create an initial in-cluster renderjob which should succeed
+	// test calls webhook which creates a second job to re-render which should succeed
+	// requires TestSetupEnvironment()
+	// requires TestCreateJobForClone()
+
 	localdir := t.TempDir()
+
+	var cm *CompletionTrackingJobManager
+	jm, cm = getCompletionTrackingJobManager(t)
+
 	p := &xxxProvider{}
-	cmd := getRunWebhookServerCmd(p)
+	wp := newE2mockprovider(p)
+	cmd := getRunWebhookServerCmd(wp)
 
-	cmd.SetArgs([]string{"--targetrepo", "http://foo",
-		"--localdir", localdir, "--kubeconfigpath", internal.GetTestConfigPath(t)})
+	cm.On("CreateJob",
+		"jekyll-render-container", testNamespace,
+		mock.AnythingOfType("string"),                // image
+		mock.AnythingOfType("[]string"),              // command
+		mock.AnythingOfType("[]string"),              // args
+		mock.AnythingOfType("kubelayer.JobNotifier"), // notifier
+		false, // autodelete
+		mock.AnythingOfType("[]kubelayer.PVClaimMountRef"), // mountlist
+		nil, // this is the result returned by the underlying createjob implementation.  Used to ensure job creation succeeded
+	)
 
-	err := cmd.Execute()
-	if err != nil {
-		t.Fatal(err)
+	cm.On("DeleteJob", "jekyll-render-container", testNamespace)
+
+	// targetrepo and localdir are unused as no initial clone
+	// webhook will run job in cluster
+	// NOTE: no intialclone blows things up due to nil repomanager
+	cmd.SetArgs([]string{"--targetrepo=" + testRepo,
+		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=" + testNamespace,
+		"--initialclone=true",
+		"--initialbuild=true", "--webhooklisten=true"})
+
+	waitExit := make(chan error)
+	go func() {
+		err := cmd.Execute()
+		waitExit <- err
+		close(waitExit)
+	}()
+
+	cm.WaitDone(t, 3)
+
+	// TODO: delete job should only be called once (bug in jobmanager).
+	// As part of this delete job should be smart about the name of the job being deleted (eg if initial render and webhook differently named)
+	exp := cm.AssertNumberOfCalls(t, "DeleteJob", 3)
+	if !exp {
+		t.Fatalf("Incorrect deletejob count")
 	}
 
-	// 	// TODO: create test namespace
-	// 	jm, err := jobmanager.Newjobmanager(GetTestConfig(t), testNamespace, false)
-	// 	if err != nil {
-	// 		t.Errorf("job manager create failed")
-	// 	}
-	// 	//	err = jm.KubeSession().CreateNamespace(testNamespace)
-	// 	//	if err != nil {
-	// 	//		t.Fatalf("unable to create namespace %v", err)
-	// 	//	}
-	// 	createVolumes(err, jm.KubeSession(), t)
-	//
-	// 	repo, localdir, _, _, _ := internal.Getenv(t)
-	// 	c := GetTestConfig(t)
-	// 	err = PerformActions(currentProvider, c, repo, localdir, "main", "testns", false, false, true, true)
-	// 	if err != nil {
-	// 		t.Fatalf("Performactions failed %v", err)
-	// 	}
-	//
-	// 	// TODO: call post to webhook to trigger job
+	err := lrm.HandleWebhook("main", false)
+	if err != nil {
+		t.Fatalf("body read failed: %v", err)
+	}
+
+	// wait for webhook triggered render
+	cm.WaitDone(t, 3)
+
+	wp.signalDone()
+	exitError := <-waitExit
+	if exitError != nil {
+		t.Fatalf(exitError.Error())
+	}
+
+	exp = cm.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect deletejob count")
+	}
 }
 
-func ToDoFullE2eTestWithWebhook() {
-	// pass args into cmd
-	// TODO
+// TOTO this is duplicate code but moving it into internal/testutils creates a cycle
+// between jobmanager integration tests and internal/testutils
+
+type e2emockprovider struct {
+	// mock.Mock
+	doneChan        chan struct{}
+	wrappedProvider providers
+}
+
+func newE2mockprovider(p providers) *e2emockprovider {
+	provider := e2emockprovider{}
+	provider.doneChan = make(chan struct{})
+	provider.wrappedProvider = p
+	return &provider
+}
+
+func (p *e2emockprovider) initialClone(a string, b string) error {
+	// p.Called(a, b)
+	clarkezoneLog.Debugf("initialClone with %v and %v", a, b)
+	return p.wrappedProvider.initialClone(a, b)
+}
+
+func (p *e2emockprovider) initialBuild(a string) error {
+	clarkezoneLog.Debugf("== initial build with '%v'", a)
+	// p.Called(a)
+	return p.wrappedProvider.initialBuild(a)
+}
+
+func (p *e2emockprovider) webhookListen() {
+	clarkezoneLog.Debugf("webhookListen")
+	p.wrappedProvider.webhookListen()
+}
+
+func (p *e2emockprovider) waitForInterupt() error {
+	clarkezoneLog.Debugf("waitForInterupt")
+	// p.Called()
+	<-p.doneChan
+	return nil
+}
+
+func (p *e2emockprovider) needInitialization() bool {
+	clarkezoneLog.Debugf("needInitialization")
+	return p.wrappedProvider.needInitialization()
+}
+
+func (p *e2emockprovider) signalDone() {
+	close(p.doneChan)
+}
+
+// TODO this is duplicate code.  Find a way of sharing without cycles between testinternal and jobmanaber
+func getCompletionTrackingJobManager(t *testing.T) (*jobmanager.Jobmanager, *CompletionTrackingJobManager) {
+	internal.SetupGitRoot()
+	path := internal.GetTestConfigPath(t)
+	config, err := kubelayer.GetConfigOutofCluster(path)
+	if err != nil {
+		t.Fatalf("Can't get config %v", err)
+	}
+	jm, err := jobmanager.Newjobmanager(config, "testns", false, true)
+	if err != nil {
+		t.Fatalf("Can't create jobmanager %v", err)
+	}
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider.(jobmanager.Jobxxx), 120)
+
+	jm.JobProvider = wrappedProvider
+
+	// Watchers must be started after the provider has been wrapped
+	jm.StartWatchers(true)
+	return jm, wrappedProvider
 }
 
 func prepareEnvironment(t *testing.T) {
@@ -140,21 +258,7 @@ func prepareEnvironment(t *testing.T) {
 		}
 	})
 	_, _ = createVolumes(ks, t)
-}
-
-func createJobForClone(t *testing.T, ks *kubelayer.KubeSession) {
-	// create job to launch clone only previewd with persistent volumes bound
-	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
-	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
-	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
-	cmd := []string{"./previewd"}
-	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=false",
-		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
-	_, err := ks.CreateJob("populatepv", testNamespace, imagePath, cmd, args, nil, false, refs)
-	if err != nil {
-		t.Fatalf("create job failed: %v", err)
-	}
+	<-wait
 }
 
 func createJobForTestServerWithMountedVols(t *testing.T, ks *kubelayer.KubeSession) {
@@ -162,10 +266,9 @@ func createJobForTestServerWithMountedVols(t *testing.T, ks *kubelayer.KubeSessi
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", true)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := "registry.hub.docker.com/clarkezone/previewd:0.0.3"
 	cmd := []string{"./previewd"}
 	args := []string{"testserver"}
-	_, err := ks.CreateJob("testserver", testNamespace, imagePath, cmd, args, nil, false, refs)
+	_, err := ks.CreateJob("testserver", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
 	if err != nil {
 		t.Fatalf("create job failed: %v", err)
 	}
@@ -184,7 +287,7 @@ func runTestJod(ks *kubelayer.KubeSession, jobName string, testNamespace string,
 	outputjob := <-completechannel
 
 	log.Println("Completed; attempting delete")
-	err = ks.DeleteJob("alpinetest", testNamespace)
+	err = ks.DeleteJob(jobName, testNamespace)
 	if err != nil {
 		t.Fatalf("Unable to delete job %v", err)
 	}
@@ -228,6 +331,10 @@ func getKubeSession(t *testing.T) *kubelayer.KubeSession {
 	if err != nil {
 		t.Fatalf("Unable to create kubesession %v", err)
 	}
+	err = ks.StartWatchers(testNamespace, true)
+	if err != nil {
+		t.Fatalf("failed to start watchers %v", err)
+	}
 	return ks
 }
 
@@ -242,4 +349,57 @@ func createVolumes(jm *kubelayer.KubeSession, t *testing.T) (string, string) {
 		t.Fatalf("unable to create persistent volume claim %v", err)
 	}
 	return sourcePvName, renderPvName
+}
+
+type CompletionTrackingJobManager struct {
+	mock.Mock
+	wrappedJob      jobmanager.Jobxxx
+	done            chan bool
+	timeoutinterval int
+}
+
+func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
+	image string, command []string, args []string, notifier kubelayer.JobNotifier,
+	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
+	job, err := o.wrappedJob.CreateJob(name, namespace, image, command,
+		args, notifier, autoDelete, mountlist)
+	o.Called(name, namespace, image, command, args, notifier, autoDelete, mountlist, err)
+	return job, err
+}
+
+func (o *CompletionTrackingJobManager) DeleteJob(name string, namespace string) error {
+	o.Called(name, namespace)
+	err := o.wrappedJob.DeleteJob(name, namespace)
+	o.done <- true
+	return err
+}
+
+func (o *CompletionTrackingJobManager) FailedJob(name string, namespace string) {
+	o.Called(name, namespace)
+	o.wrappedJob.FailedJob(name, namespace)
+	o.done <- true
+}
+
+func (o *CompletionTrackingJobManager) InProgress() bool {
+	return o.wrappedJob.InProgress()
+}
+
+func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
+	clarkezoneLog.Debugf("Begin wait done on mockjobmananger")
+	for i := 0; i < numjobs; i++ {
+		select {
+		case <-o.done:
+			clarkezoneLog.Debugf("WaitDone: o done received")
+		case <-time.After(time.Duration(o.timeoutinterval) * time.Second):
+			t.Fatalf("No done before %v second timeout", o.timeoutinterval)
+		}
+	}
+	clarkezoneLog.Debugf("End wait done on mockjobmananger")
+}
+
+func newCompletionTrackingJobManager(towrap jobmanager.Jobxxx, timeout int) *CompletionTrackingJobManager {
+	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap}
+	wrapped.timeoutinterval = timeout
+	wrapped.done = make(chan bool)
+	return wrapped
 }

@@ -6,10 +6,8 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
-	"runtime"
 
 	"github.com/clarkezone/previewd/pkg/config"
 	"github.com/clarkezone/previewd/pkg/jobmanager"
@@ -211,12 +209,15 @@ func intitializeDependencies(provider providers, webhooklisten bool, initialbuil
 			return err
 		}
 		if webhooklisten || initialbuild {
-			jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
-			if err != nil {
-				return err
+			// possible that integration tests has preconfigured job manager
+			if jm == nil {
+				jm, err = jobmanager.Newjobmanager(c, namespace, true, false)
+				if err != nil {
+					return err
+				}
 			}
 		}
-		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm)
+		lrm, err = llrm.CreateLocalRepoManager(localRootDir, nil, enableBranchMode, jm, namespace)
 		if err != nil {
 			clarkezoneLog.Debugf("Unable to create localrepomanager via CreateLocalRepoManager")
 			return err
@@ -252,50 +253,7 @@ func (xxxProvider) waitForInterupt() error {
 
 func (xxxProvider) initialBuild(namespace string) error {
 	clarkezoneLog.Debugf("initialbuild() with namespace %v", namespace)
-	const rendername = "render"
-	const sourcename = "source"
-	render, err := jm.KubeSession().FindpvClaimByName(rendername, namespace)
-	if err != nil {
-		clarkezoneLog.Errorf("initialBuild() can't find pvcalim render %v", err)
-		return err
-	}
-	if render == "" {
-		clarkezoneLog.Errorf("initialBuild() render name empty")
-		return fmt.Errorf("initialBuild() render name empty")
-	}
-	source, err := jm.KubeSession().FindpvClaimByName(sourcename, namespace)
-	if err != nil {
-		clarkezoneLog.Errorf("initialBuild() can't find pvcalim source %v", err)
-		return err
-	}
-	if source == "" {
-		clarkezoneLog.Errorf("initialBuild() source name empty")
-		return fmt.Errorf("initialBuild() source name empty")
-	}
-	renderref := jm.KubeSession().CreatePvCMountReference(render, "/site", false)
-	srcref := jm.KubeSession().CreatePvCMountReference(source, "/src", false)
-	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	imagePath := getJekyllImage()
-	command, params := getJekyllCommands()
-	clarkezoneLog.Debugf("initialBuild() submitting job namespace:%v, imagePath:%v, command:%v, pararms:%v, refs:%v",
-		namespace, imagePath, command, params, refs)
-	err = jm.AddJobtoQueue("jekyll-render-container", namespace, imagePath, command,
-		params, refs)
-	if err != nil {
-		clarkezoneLog.Errorf("Failed to create job: %v", err.Error())
-	}
-	return nil
-}
-
-func getJekyllImage() string {
-	fmt.Printf("%v", runtime.GOARCH)
-	return "registry.hub.docker.com/clarkezone/jekyll:sha-df0a146"
-}
-
-func getJekyllCommands() ([]string, []string) {
-	command := []string{"sh", "-c", "--"}
-	params := []string{"cd /src/source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
-	return command, params
+	return jobmanager.CreateJekyllJob(namespace, jm.KubeSession(), jm)
 }
 
 func init() {

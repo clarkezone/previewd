@@ -88,7 +88,7 @@ func (gl *gitlayer) checkout(branch string) error {
 	var feo *git.FetchOptions
 
 	if gl.pat == "" {
-		feo = &git.FetchOptions{}
+		feo = &git.FetchOptions{Force: true}
 	} else {
 		feo = &git.FetchOptions{
 			Auth: &http.BasicAuth{
@@ -106,8 +106,8 @@ func (gl *gitlayer) checkout(branch string) error {
 
 	nm := plumbing.NewRemoteReferenceName(remote.Config().Name, branch)
 
-	fmt.Printf("Checking out new branch %v\n", nm)
-	err = gl.wt.Checkout(&git.CheckoutOptions{Branch: nm})
+	fmt.Printf("Checking out new branch %v with force", nm)
+	err = gl.wt.Checkout(&git.CheckoutOptions{Branch: nm, Force: true})
 
 	if err != nil {
 		fmt.Printf("Checkout new branch failed %v\n", err.Error())
@@ -123,7 +123,7 @@ func (gl *gitlayer) pull(branch string) error {
 	var feo *git.PullOptions
 
 	if gl.pat == "" {
-		feo = &git.PullOptions{ReferenceName: nm}
+		feo = &git.PullOptions{ReferenceName: nm, Force: true}
 	} else {
 		feo = &git.PullOptions{
 			ReferenceName: nm,

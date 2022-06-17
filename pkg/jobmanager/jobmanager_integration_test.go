@@ -23,8 +23,9 @@ import (
 )
 
 type CompletionTrackingJobManager struct {
-	wrappedJob jobxxx
-	done       chan bool
+	wrappedJob      Jobxxx
+	done            chan bool
+	timeoutinterval int
 }
 
 func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
@@ -54,16 +55,18 @@ func (o *CompletionTrackingJobManager) WaitDone(t *testing.T, numjobs int) {
 	for i := 0; i < numjobs; i++ {
 		select {
 		case <-o.done:
-		case <-time.After(20 * time.Second):
-			t.Fatalf("No done before 10 second timeout")
+			clarkezoneLog.Debugf("WaitDone: o done received")
+		case <-time.After(time.Duration(o.timeoutinterval) * time.Second):
+			t.Fatalf("No done before %v second timeout", o.timeoutinterval)
 		}
 	}
 	clarkezoneLog.Debugf("End wait done on mockjobmananger")
 }
 
-func newCompletionTrackingJobManager(towrap jobxxx) *CompletionTrackingJobManager {
+func newCompletionTrackingJobManager(towrap Jobxxx, timeout int) *CompletionTrackingJobManager {
 	wrapped := &CompletionTrackingJobManager{wrappedJob: towrap}
-	wrapped.done = make(chan bool, 10)
+	wrapped.timeoutinterval = timeout
+	wrapped.done = make(chan bool)
 	return wrapped
 }
 
@@ -79,9 +82,9 @@ func TestCreateJobE2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
-	wrappedProvider := newCompletionTrackingJobManager(jm.jobProvider)
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider, 20)
 
-	jm.jobProvider = wrappedProvider
+	jm.JobProvider = wrappedProvider
 
 	// Watchers must be started after the provider has been wrapped
 	jm.StartWatchers(true)
@@ -91,5 +94,38 @@ func TestCreateJobE2E(t *testing.T) {
 		t.Fatalf("Unable to create job %v", err)
 	}
 
-	wrappedProvider.WaitDone(t, 1)
+	wrappedProvider.WaitDone(t, 3)
+}
+
+func TestCompletionTrackingMultiple(t *testing.T) {
+	internal.SetupGitRoot()
+	path := internal.GetTestConfigPath(t)
+	config, err := kubelayer.GetConfigOutofCluster(path)
+	if err != nil {
+		t.Fatalf("Can't get config %v", err)
+	}
+	jm, err := Newjobmanager(config, "testns", false, true)
+	if err != nil {
+		t.Fatalf("Can't create jobmanager %v", err)
+	}
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider, 20)
+
+	jm.JobProvider = wrappedProvider
+
+	// Watchers must be started after the provider has been wrapped
+	jm.StartWatchers(true)
+	err = jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		t.Fatalf("Unable to create job %v", err)
+	}
+
+	wrappedProvider.WaitDone(t, 3)
+	err = jm.AddJobtoQueue("alpinetest", testNamespace, "alpine", nil, nil,
+		[]kubelayer.PVClaimMountRef{})
+	if err != nil {
+		t.Fatalf("Unable to create job %v", err)
+	}
+
+	wrappedProvider.WaitDone(t, 3)
 }
