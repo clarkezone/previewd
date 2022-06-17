@@ -8,7 +8,6 @@ package cmd
 
 import (
 	"log"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/clarkezone/previewd/pkg/jobmanager"
 	"github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
+	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -110,11 +110,24 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	wp := newE2mockprovider(p)
 	cmd := getRunWebhookServerCmd(wp)
 
+	cm.On("CreateJob",
+		"jekyll-render-container", testNamespace,
+		mock.AnythingOfType("string"),                // image
+		mock.AnythingOfType("[]string"),              // command
+		mock.AnythingOfType("[]string"),              // args
+		mock.AnythingOfType("kubelayer.JobNotifier"), // notifier
+		false, // autodelete
+		mock.AnythingOfType("[]kubelayer.PVClaimMountRef"), // mountlist
+		nil, // this is the result returned by the underlying createjob implementation.  Used to ensure job creation succeeded
+	)
+
+	cm.On("DeleteJob", "jekyll-render-container", testNamespace)
+
 	// targetrepo and localdir are unused as no initial clone
 	// webhook will run job in cluster
 	// NOTE: no intialclone blows things up due to nil repomanager
 	cmd.SetArgs([]string{"--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git",
-		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=testns",
+		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=" + testNamespace,
 		"--initialclone=true",
 		"--initialbuild=true", "--webhooklisten=true"})
 
@@ -127,7 +140,14 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 
 	cm.WaitDone(t, 3)
 
-	err := lrm.HandleWebhook("main", true, false)
+	// TODO: delete job should only be called once (bug in jobmanager).
+	// As part of this delete job should be smart about the name of the job being deleted (eg if initial render and webhook differently named)
+	exp := cm.AssertNumberOfCalls(t, "DeleteJob", 3)
+	if !exp {
+		t.Fatalf("Incorrect deletejob count")
+	}
+
+	err := lrm.HandleWebhook("main", false)
 	if err != nil {
 		t.Fatalf("body read failed: %v", err)
 	}
@@ -141,7 +161,10 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 		t.Fatalf(exitError.Error())
 	}
 
-	// TODO: use mock to verify calls to completiontrackingjobmanager
+	exp = cm.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect deletejob count")
+	}
 }
 
 // TOTO this is duplicate code but moving it into internal/testutils creates a cycle
@@ -325,121 +348,8 @@ func createVolumes(jm *kubelayer.KubeSession, t *testing.T) (string, string) {
 	return sourcePvName, renderPvName
 }
 
-//nolint
-func GetBody() *strings.Reader {
-	//nolint
-	body := `{
-		"ref": "refs/heads/master",
-		"before": "cfbda0818c286970d373bab5e700599e572d3c40",
-		"after": "e2cdd9288b113800293027bc5dae2c7d47b36189",
-		"compare_url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2/compare/cfbda0818c286970d373bab5e700599e572d3c40...e2cdd9288b113800293027bc5dae2c7d47b36189",
-		"commits": [
-		  {
-			"id": "e2cdd9288b113800293027bc5dae2c7d47b36189",
-			"message": "Update 'test.txt'\n",
-			"url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2/commit/e2cdd9288b113800293027bc5dae2c7d47b36189",
-			"author": {
-			  "name": "clarkezone",
-			  "email": "james@clarkezone.io",
-			  "username": "clarkezone"
-			},
-			"committer": {
-			  "name": "clarkezone",
-			  "email": "james@clarkezone.io",
-			  "username": "clarkezone"
-			},
-			"verification": null,
-			"timestamp": "2022-04-10T09:35:51Z",
-			"added": [],
-			"removed": [],
-			"modified": [
-			  "test.txt"
-			]
-		  }
-		],
-		"head_commit": {
-		  "id": "e2cdd9288b113800293027bc5dae2c7d47b36189",
-		  "message": "Update 'test.txt'\n",
-		  "url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2/commit/e2cdd9288b113800293027bc5dae2c7d47b36189",
-		  "author": {
-			"name": "clarkezone",
-			"email": "james@clarkezone.io",
-			"username": "clarkezone"
-		  },
-		  "committer": {
-			"name": "clarkezone",
-			"email": "james@clarkezone.io",
-			"username": "clarkezone"
-		  },
-		  "verification": null,
-		  "timestamp": "2022-04-10T09:35:51Z",
-		  "added": [],
-		  "removed": [],
-		  "modified": [
-			"test.txt"
-		  ]
-		},
-		"repository": {
-		  "id": 1,
-		  "owner": {"id":1,"login":"clarkezone","full_name":"","email":"james@clarkezone.io","avatar_url":"http://gitea.homelab.clarkezone.dev:3000/user/avatar/clarkezone/-1","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2021-11-21T18:43:19Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"clarkezone"},
-		  "name": "testfoobar2",
-		  "full_name": "clarkezone/testfoobar2",
-		  "description": "",
-		  "empty": false,
-		  "private": false,
-		  "fork": false,
-		  "template": false,
-		  "parent": null,
-		  "mirror": false,
-		  "size": 21,
-		  "html_url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2",
-		  "ssh_url": "ssh://git@gitea.homelab.clarkezone.dev:2222/clarkezone/testfoobar2.git",
-		  "clone_url": "http://gitea.homelab.clarkezone.dev:3000/clarkezone/testfoobar2.git",
-		  "original_url": "",
-		  "website": "",
-		  "stars_count": 0,
-		  "forks_count": 0,
-		  "watchers_count": 1,
-		  "open_issues_count": 0,
-		  "open_pr_counter": 0,
-		  "release_counter": 0,
-		  "default_branch": "master",
-		  "archived": false,
-		  "created_at": "2021-11-21T18:50:53Z",
-		  "updated_at": "2022-04-10T09:32:02Z",
-		  "permissions": {
-			"admin": true,
-			"push": true,
-			"pull": true
-		  },
-		  "has_issues": true,
-		  "internal_tracker": {
-			"enable_time_tracker": true,
-			"allow_only_contributors_to_track_time": true,
-			"enable_issue_dependencies": true
-		  },
-		  "has_wiki": true,
-		  "has_pull_requests": true,
-		  "has_projects": true,
-		  "ignore_whitespace_conflicts": false,
-		  "allow_merge_commits": true,
-		  "allow_rebase": true,
-		  "allow_rebase_explicit": true,
-		  "allow_squash_merge": true,
-		  "default_merge_style": "merge",
-		  "avatar_url": "",
-		  "internal": false,
-		  "mirror_interval": ""
-		},
-		"pusher": {"id":1,"login":"clarkezone","full_name":"","email":"james@clarkezone.io","avatar_url":"http://gitea.homelab.clarkezone.dev:3000/user/avatar/clarkezone/-1","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2021-11-21T18:43:19Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"clarkezone"},
-		"sender": {"id":1,"login":"clarkezone","full_name":"","email":"james@clarkezone.io","avatar_url":"http://gitea.homelab.clarkezone.dev:3000/user/avatar/clarkezone/-1","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2021-11-21T18:43:19Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"clarkezone"}
-	  }
-	`
-	reader := strings.NewReader(body)
-	return reader
-}
-
 type CompletionTrackingJobManager struct {
+	mock.Mock
 	wrappedJob      jobmanager.Jobxxx
 	done            chan bool
 	timeoutinterval int
@@ -448,17 +358,21 @@ type CompletionTrackingJobManager struct {
 func (o *CompletionTrackingJobManager) CreateJob(name string, namespace string,
 	image string, command []string, args []string, notifier kubelayer.JobNotifier,
 	autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error) {
-	return o.wrappedJob.CreateJob(name, namespace, image, command,
+	job, err := o.wrappedJob.CreateJob(name, namespace, image, command,
 		args, notifier, autoDelete, mountlist)
+	o.Called(name, namespace, image, command, args, notifier, autoDelete, mountlist, err)
+	return job, err
 }
 
 func (o *CompletionTrackingJobManager) DeleteJob(name string, namespace string) error {
+	o.Called(name, namespace)
 	err := o.wrappedJob.DeleteJob(name, namespace)
 	o.done <- true
 	return err
 }
 
 func (o *CompletionTrackingJobManager) FailedJob(name string, namespace string) {
+	o.Called(name, namespace)
 	o.wrappedJob.FailedJob(name, namespace)
 	o.done <- true
 }

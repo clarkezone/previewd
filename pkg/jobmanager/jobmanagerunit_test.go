@@ -147,7 +147,10 @@ func TestSingleJobSucess(t *testing.T) {
 	}
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 1)
-	mjm.AssertExpectations(t)
+	exp := mjm.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	jm.stopMonitor()
 }
 
@@ -190,7 +193,10 @@ func TestMultiJobSuccess(t *testing.T) {
 	// }()
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 2)
-	mjm.AssertExpectations(t)
+	exp := mjm.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	jm.stopMonitor()
 }
 
@@ -214,7 +220,10 @@ func TestSingleJobFail(t *testing.T) {
 
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 1)
-	mjm.AssertExpectations(t)
+	exp := mjm.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	jm.stopMonitor()
 }
 func TestMultiJobFail(t *testing.T) {
@@ -241,7 +250,10 @@ func TestMultiJobFail(t *testing.T) {
 	}
 	// This wait will be completed when delete is called on the mockjobmanager
 	mjm.WaitDone(t, 1)
-	mjm.AssertExpectations(t)
+	exp := mjm.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	jm.stopMonitor()
 }
 

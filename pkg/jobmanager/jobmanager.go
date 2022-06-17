@@ -182,6 +182,9 @@ func (jm *Jobmanager) startMonitor(jobcontroller Jobxxx) {
 				jm.haveFailedJob = failed
 				switch {
 				case readyNext && !failed:
+					// TODO: delete job should only be called once (bug in jobmanager).
+					// As part of this delete job should be smart about the name of the job being deleted
+					// (eg if initial render and webhook differently named)
 					clarkezoneLog.Debugf(" startMonitor(): successfully completed job detected, deleting job")
 					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
 					if err != nil {

@@ -131,9 +131,8 @@ func (lrm *LocalRepoManager) SwitchBranch(branch string) error {
 	return nil
 }
 
-//nolint
-//lint:ignore U1000 called commented out
-func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotify bool) error {
+// HandleWebhook called by webhook machinery to trigger new job
+func (lrm *LocalRepoManager) HandleWebhook(branch string, sendNotify bool) error {
 	clarkezoneLog.Debugf("LocalRepoManager::HandleWebhook branch: %v", branch)
 	err := lrm.SwitchBranch(branch)
 	if err != nil {
@@ -150,11 +149,11 @@ func (lrm *LocalRepoManager) HandleWebhook(branch string, runjek bool, sendNotif
 	if lrm.jm == nil {
 		clarkezoneLog.Infof("Skipping StartJob due to lack of jobmanager instance")
 	} else {
-		jobmanager.CreateJekyllJob(lrm.kubenamespace, lrm.jm.KubeSession(), lrm.jm)
+		err = jobmanager.CreateJekyllJob(lrm.kubenamespace, lrm.jm.KubeSession(), lrm.jm)
 	}
 
 	if lrm.enableBranchMode && sendNotify && lrm.newBranchObs != nil {
 		lrm.newBranchObs.NewBranch(lrm.legalizeBranchName(branch), renderDir)
 	}
-	return nil
+	return err
 }
