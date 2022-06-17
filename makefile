@@ -66,8 +66,8 @@ integration:
 .PHONY: e2etest
 e2etest:
 # TODO these need to wait before they can be used in here
-#	go test -tags="integration" --count=1 -v -timeout 15m ./cmd/ -run TestSetupEnvironment
-#    go test -tags="integration" --count=1 -v -timeout 15m ./cmd/ -run TestCreateJobForClone
+	go test -tags="integration" --count=1 -v -timeout 15m ./cmd/ -run TestSetupEnvironment
+	go test -tags="integration" --count=1 -v -timeout 15m ./cmd/ -run TestCreateJobForClone
 	go test -tags="integration" --count=1 -v -timeout 15m ./cmd/ -run TestFullE2eTestWithWebhook
 
 .PHONY: dep

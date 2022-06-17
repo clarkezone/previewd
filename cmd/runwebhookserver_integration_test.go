@@ -26,28 +26,40 @@ const (
 	sourcePvName      = "source"
 	testNamespace     = "testns"
 	previewdImagePath = "registry.hub.docker.com/clarkezone/previewd:0.0.3"
+	testRepo          = "https://github.com/clarkezone/selfhostinfrablog.git"
 )
 
 func TestSetupEnvironment(t *testing.T) {
-	prepareEnvironment(t)
-	// TODO: wait
+	ks := getKubeSession(t)
+	wait := make(chan bool)
+	ks.CreateNamespace(testNamespace, func(ns *corev1.Namespace, rt kubelayer.ResourseStateType) {
+		if rt == kubelayer.Create {
+			wait <- true
+		}
+	})
+	<-wait
+	_, _ = createVolumes(ks, t)
 }
 
 func TestCreateJobForClone(t *testing.T) {
 	ks := getKubeSession(t)
+	completechannel, deletechannel, notifier := getNotifier()
 
 	// create job to launch clone only previewd with persistent volumes bound
 	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
 	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
 	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
 	cmd := []string{"./previewd"}
-	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git", "--localdir=/src", " --initialclone=true",
+	args := []string{"runwebhookserver", "--targetrepo=" + testRepo, "--localdir=/src", " --initialclone=true",
 		"--initialbuild=false", "--webhooklisten=false", "--loglevel=debug"}
-	_, err := ks.CreateJob("populatepv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
-	if err != nil {
-		t.Fatalf("create job failed: %v", err)
+
+	outputjob := runTestJod(ks, "populatepv", testNamespace,
+		previewdImagePath,
+		completechannel, deletechannel, t, cmd, args, notifier, refs)
+
+	if outputjob.Status.Succeeded != 1 {
+		t.Fatalf("Jobs didn't succeed")
 	}
-	// TODO wait for job to complete
 }
 
 func TestCreateJobTestServerMountVols(t *testing.T) {
@@ -126,7 +138,7 @@ func TestFullE2eTestWithWebhook(t *testing.T) {
 	// targetrepo and localdir are unused as no initial clone
 	// webhook will run job in cluster
 	// NOTE: no intialclone blows things up due to nil repomanager
-	cmd.SetArgs([]string{"--targetrepo=https://github.com/clarkezone/selfhostinfrablog.git",
+	cmd.SetArgs([]string{"--targetrepo=" + testRepo,
 		"--localdir=" + localdir, "--kubeconfigpath=" + internal.GetTestConfigPath(t), "--namespace=" + testNamespace,
 		"--initialclone=true",
 		"--initialbuild=true", "--webhooklisten=true"})
@@ -228,7 +240,7 @@ func getCompletionTrackingJobManager(t *testing.T) (*jobmanager.Jobmanager, *Com
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
-	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider.(jobmanager.Jobxxx), 60)
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider.(jobmanager.Jobxxx), 120)
 
 	jm.JobProvider = wrappedProvider
 
@@ -246,20 +258,7 @@ func prepareEnvironment(t *testing.T) {
 		}
 	})
 	_, _ = createVolumes(ks, t)
-}
-
-func createJobForClone(t *testing.T, ks *kubelayer.KubeSession) {
-	// create job to launch clone only previewd with persistent volumes bound
-	renderref := ks.CreatePvCMountReference(renderPvName, "/site", false)
-	srcref := ks.CreatePvCMountReference(sourcePvName, "/src", false)
-	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
-	cmd := []string{"./previewd"}
-	args := []string{"runwebhookserver", "--targetrepo=https://github.com/clarkezone/clarkezone.github.io.git", "--localdir=/src", " --initialclone=false",
-		"--initialbuild=true", "--webhooklisten=true", "--loglevel=debug"}
-	_, err := ks.CreateJob("populatepv", testNamespace, previewdImagePath, cmd, args, nil, false, refs)
-	if err != nil {
-		t.Fatalf("create job failed: %v", err)
-	}
+	<-wait
 }
 
 func createJobForTestServerWithMountedVols(t *testing.T, ks *kubelayer.KubeSession) {
@@ -288,7 +287,7 @@ func runTestJod(ks *kubelayer.KubeSession, jobName string, testNamespace string,
 	outputjob := <-completechannel
 
 	log.Println("Completed; attempting delete")
-	err = ks.DeleteJob("alpinetest", testNamespace)
+	err = ks.DeleteJob(jobName, testNamespace)
 	if err != nil {
 		t.Fatalf("Unable to delete job %v", err)
 	}
@@ -331,6 +330,10 @@ func getKubeSession(t *testing.T) *kubelayer.KubeSession {
 	ks, err := kubelayer.Newkubesession(GetTestConfig(t))
 	if err != nil {
 		t.Fatalf("Unable to create kubesession %v", err)
+	}
+	err = ks.StartWatchers(testNamespace, true)
+	if err != nil {
+		t.Fatalf("failed to start watchers %v", err)
 	}
 	return ks
 }
