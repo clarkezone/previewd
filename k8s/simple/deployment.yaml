@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: previewddeployment
+  namespace: previewdtest
+  labels:
+    app: previewdtest
+spec:
+  selector:
+    matchLabels:
+      app: previewdtest
+  template:
+    metadata:
+      labels:
+        app: previewdtest
+    spec:
+      serviceAccountName: previewd-sa
+      containers:
+        - name: previewd-server
+          image: registry.hub.docker.com/clarkezone/previewd:0.0.4
+          imagePullPolicy: Always
+          args: ["runwebhookserver"]
+          env:
+            - name: TARGETREPO
+              value: https://github.com/clarkezone/selfhostinfrablog.git
+            - name: LOCALDIR
+              value: /src
+            - name: LOGLEVEL
+              value: debug
+            - name: NAMESPACE
+              value: previewdtest
+          volumeMounts:
+            - mountPath: /src
+              name: blogsource
+          ports:
+            - containerPort: 8090
+      volumes:
+        - name: blogsource
+          persistentVolumeClaim:
+            claimName: blogsource-pvc
+        - name: blogrender
+          persistentVolumeClaim:
+            claimName: blogrender-pvc
