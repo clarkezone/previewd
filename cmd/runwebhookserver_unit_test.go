@@ -64,7 +64,10 @@ func Test_CmdBase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m.AssertExpectations(t)
+	exp := m.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	clarkezoneLog.Debugf("Test_cmdBase END ============================================================== ")
 }
 
@@ -83,7 +86,10 @@ func Test_CmdInitialRenderHookListen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mo.AssertExpectations(t)
+	exp := mo.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	clarkezoneLog.Debugf("Test_CmdInitialRenderHookListen END ============================================ ")
 }
 
@@ -104,7 +110,10 @@ func Test_CmdCloneOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m.AssertExpectations(t)
+	exp := m.AssertExpectations(t)
+	if !exp {
+		t.Fatalf("Incorrect expectations")
+	}
 	clarkezoneLog.Debugf("Test_CmdCloneOnly END ===============================================")
 }
 

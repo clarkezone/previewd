@@ -7,6 +7,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/rest"
 
+	"github.com/clarkezone/previewd/internal"
 	kubelayer "github.com/clarkezone/previewd/pkg/kubelayer"
 	clarkezoneLog "github.com/clarkezone/previewd/pkg/log"
 )
@@ -27,7 +28,8 @@ type jobupdate struct {
 	typee kubelayer.ResourseStateType
 }
 
-type jobxxx interface {
+// Jobxxx is a provider interface for tracking job status
+type Jobxxx interface {
 	CreateJob(name string, namespace string,
 		image string, command []string, args []string, notifier kubelayer.JobNotifier,
 		autoDelete bool, mountlist []kubelayer.PVClaimMountRef) (*batchv1.Job, error)
@@ -45,19 +47,14 @@ type Jobmanager struct {
 	monitorExit   chan bool
 	monitorDone   chan bool
 	haveFailedJob bool
-	jobProvider   jobxxx
+	// TODO: is there a better way to avoid test need impacting API shape
+	// JobProvider is public to enable integration tests to modify
+	JobProvider Jobxxx
 }
 
 type kubeJobManager struct {
 	kubeSession *kubelayer.KubeSession
 	jobRefs     map[string]string
-
-	// TODO: re-enable end-to-end tests in runwebhookserver_test.go
-	// [x] TODO: delete pods accociated with job - ensure volumes are unbound ready
-	// TODO: fire webhook and confirm second job happens successfully
-
-	// TODO: Ensure kubesession tests delete ns at end
-	// TODO: Create ns for Jobmanager integration test and re-enable in makefile
 }
 
 // Implement jobxxx interface begin
@@ -113,7 +110,7 @@ func Newjobmanager(config *rest.Config, namespace string, startwatchers bool,
 	return jm, nil
 }
 
-func newjobmanagerinternal(config *rest.Config, provider jobxxx, namespace string) (*Jobmanager, error) {
+func newjobmanagerinternal(config *rest.Config, provider Jobxxx, namespace string) (*Jobmanager, error) {
 	if config != nil {
 		clarkezoneLog.Debugf("newjobmanagerinternal called with incluster:%v", config)
 	} else {
@@ -129,7 +126,7 @@ func newjobmanagerinternal(config *rest.Config, provider jobxxx, namespace strin
 	}
 
 	jm.addQueue = make(chan jobdescriptor)
-	jm.jobProvider = provider
+	jm.JobProvider = provider
 	jm.namespace = namespace
 	return &jm, nil
 }
@@ -149,11 +146,11 @@ func (jm *Jobmanager) StartWatchers(watchNs bool) error {
 		return err
 	}
 
-	jm.startMonitor(jm.jobProvider)
+	jm.startMonitor(jm.JobProvider)
 	return nil
 }
 
-func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
+func (jm *Jobmanager) startMonitor(jobcontroller Jobxxx) {
 	// TODO ensure monitor isn't already running
 	jobqueue := make([]jobdescriptor, 0)
 	jm.monitorExit = make(chan bool)
@@ -185,6 +182,9 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 				jm.haveFailedJob = failed
 				switch {
 				case readyNext && !failed:
+					// TODO: delete job should only be called once (bug in jobmanager).
+					// As part of this delete job should be smart about the name of the job being deleted
+					// (eg if initial render and webhook differently named)
 					clarkezoneLog.Debugf(" startMonitor(): successfully completed job detected, deleting job")
 					err := jobcontroller.DeleteJob(update.job.Name, update.job.Namespace)
 					if err != nil {
@@ -209,7 +209,7 @@ func (jm *Jobmanager) startMonitor(jobcontroller jobxxx) {
 }
 
 func (jm *Jobmanager) scheduleIfPossible(jobqueue *[]jobdescriptor,
-	jobcontroller jobxxx, jobnotifierchannel chan *jobupdate) {
+	jobcontroller Jobxxx, jobnotifierchannel chan *jobupdate) {
 	jobQueueLength := len(*jobqueue)
 	jobInProgress := jobcontroller.InProgress()
 	clarkezoneLog.Debugf("scheduleIfPossible called jobqueue length:%v, jobcontroller.InProgress():%v",
@@ -281,4 +281,35 @@ func (jm *Jobmanager) AddJobtoQueue(name string, namespace string,
 		args: args, notifier: nil, autoDelete: false, mountlist: mountlist}
 	clarkezoneLog.Debugf(" addjobtoqueue: end add job descriptor to jm.addQueue channel")
 	return nil
+}
+
+// CreateJekyllJob creates a render job using Jekyll
+func CreateJekyllJob(ns string, ks *kubelayer.KubeSession, jm *Jobmanager) error {
+	const rendername = "render"
+	const sourcename = "source"
+	render, err := ks.FindpvClaimByName(rendername, ns)
+	if err != nil {
+		clarkezoneLog.Errorf("CreateJekyllJob can't find pvcalim render %v", err)
+	}
+	if render == "" {
+		clarkezoneLog.Errorf("CreateJekyllJob render name empty")
+	}
+	source, err := ks.FindpvClaimByName(sourcename, ns)
+	if err != nil {
+		clarkezoneLog.Errorf("CreateJekyllJob can't find pvcalim source %v", err)
+	}
+	if source == "" {
+		clarkezoneLog.Errorf("CreateJekyllJob source name empty")
+	}
+	renderref := ks.CreatePvCMountReference(render, "/site", false)
+	srcref := ks.CreatePvCMountReference(source, "/src", false)
+	refs := []kubelayer.PVClaimMountRef{renderref, srcref}
+	imagePath := internal.GetJekyllImage()
+
+	command, params := internal.GetJekyllCommands()
+	err = jm.AddJobtoQueue("jekyll-render-container", ns, imagePath, command, params, refs)
+	if err != nil {
+		clarkezoneLog.Errorf("Failed to create job: %v\n", err.Error())
+	}
+	return err
 }
