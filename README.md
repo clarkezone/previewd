@@ -54,19 +54,37 @@ This project is still in development and as such we don't yet have instructions 
 1. Install a recent version of golang, we recommend 1.17 or greater. [https://go.dev/doc/install](https://go.dev/doc/install)
 2. Install `make` (debian linux: `sudo apt install make`)
 3. Install `gcc` (debian linux: `sudo apt install build-essential`)
+4. precommit TODO make install-tools
+5. githook TODO
+6. lint
+7. Install k3s
+8. If you are planning to use VSCode, ensure you have all of the golang tooling installed
 
 ### Dev Setup
 
-1. In order to run integration tests you'll need a kubernetes environment. For development we use k3s
-2. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
-3. Define environment variables TODO
+1. Configure environment variables in shell. There is a .env file in the scripts directory to establish environment variables needed for unit tests. These need to be applied in your shell and in vscode. You can add the following to your .bashrc or manually.
 
    ```bash
    export $(cat scripts/.previewd_test.env | xargs)
    ```
 
-4. precommit TODO
-5. githook TODO
+2. (optional) if you are planning to debug tests in vscode, you'll need to tell VScode about the environment variables and also enable integration tests. In VS code, go to the command palette and search for `Preferences: Open Remote settings (JSON)` and add the following snippet:
+
+   ```json
+   {
+     "go.buildFlags": ["-tags=unit,integration"],
+     "go.buildTags": "-tags=unit,integration",
+     "go.testTags": "-tags=unit,integration"
+   }
+   ```
+
+   Then search for `User Settings` and add the following snippet for environment variables:
+
+   ```json
+   "go.testEnvFile": "/home/james/.previewd_test.env",
+   ```
+
+3. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
 
 ### Build from Source
 
