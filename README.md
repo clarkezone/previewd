@@ -52,13 +52,15 @@ This project is still in development and as such we don't yet have instructions 
 ### Install Tools
 
 1. Install a recent version of golang, we recommend 1.17 or greater. [https://go.dev/doc/install](https://go.dev/doc/install)
-2. Install `make` (debian linux: `sudo apt install make`)
-3. Install `gcc` (debian linux: `sudo apt install build-essential`)
-4. precommit TODO make install-tools
-5. githook TODO
-6. lint
-7. Install k3s
-8. If you are planning to use VSCode, ensure you have all of the golang tooling installed
+2. ensure that your path includes: `export PATH=$PATH:$HOME/go/bin` so that tools installed with `go install` work correctly
+3. Install `make` (debian linux: `sudo apt install make`)
+4. Install `gcc` (debian linux: `sudo apt install build-essential`)
+5. Install [`pre-commit`](https://pre-commit.com/) (debian linux: `sudo apt install precommit`)
+6. If you are planning on submitting a PR to this repo, install the git pre-commit hook (`pre-commit install`)
+7. Install [`shellcheck`](https://github.com/koalaman/shellcheck) (`sudo apt install shellcheck`)
+8. Install tools other golang based linting tools `make install-tools`
+9. Install [`k3s`](https://github.com/k3s-io/k3s) (`curl -sfL https://get.k3s.io | sh -`)
+10. If you are planning to use VSCode, ensure you have all of the golang tooling installed
 
 ### Dev Setup
 
