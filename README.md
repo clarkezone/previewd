@@ -49,14 +49,24 @@ graph  LR
 
 This project is still in development and as such we don't yet have instructions for how to use. That said you can build the code and run the tests. The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md)
 
+### Install Tools
+
+1. Install a recent version of golang, we recommend 1.17 or greater. [https://go.dev/doc/install](https://go.dev/doc/install)
+2. Install `make` (debian linux: `sudo apt install make`)
+3. Install `gcc` (debian linux: `sudo apt install build-essential`)
+
 ### Dev Setup
 
-1. Install a recent version of golang, we recommend 1.17 or greater.
-2. In order to run integration tests you'll need a kubernetes environment. For development we use k3s
-3. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
-4. Define environment variables TODO
-5. precommit TODO
-6. githook TODO
+1. In order to run integration tests you'll need a kubernetes environment. For development we use k3s
+2. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
+3. Define environment variables TODO
+
+   ```bash
+   export $(cat scripts/.previewd_test.env | xargs)
+   ```
+
+4. precommit TODO
+5. githook TODO
 
 ### Build from Source
 
@@ -89,3 +99,5 @@ For integration test, use:
 ```bash
 make integration
 ```
+
+TODO: run tests in VS (exports)
