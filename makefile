@@ -51,6 +51,7 @@ endif
 install-tools:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && \
 	go install github.com/uw-labs/strongbox@latest
+	go install github.com/mgechev/revive@latest
 
 # export $(cat ~/.previewd_test.env | xargs)
 .PHONY: test

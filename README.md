@@ -2,90 +2,122 @@
 
 [![License](https://img.shields.io/github/license/clarkezone/previewd.svg)](https://github.com/clarkezone/previewd/blob/main/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/clarkezone/previewd)](https://goreportcard.com/report/github.com/clarkezone/previewd) [![Build and Tests](https://github.com/clarkezone/previewd/workflows/run%20tests/badge.svg)](https://github.com/clarkezone/previewd/actions?query=workflow%3A%22run+tests%22) [![Coverage Status](https://coveralls.io/repos/github/clarkezone/previewd/badge.svg?branch=main)](https://coveralls.io/github/clarkezone/previewd?branch=main) [![Go Reference](https://pkg.go.dev/badge/github.com/clarkezone/previewd.svg)](https://pkg.go.dev/github.com/clarkezone/previewd)
 
-A daemon for managing rendering for static sites and blogs in kubernetes using jobs.
+## Description
 
-# ~~Get basic skeleton app going~~
+`previewd` is a daemon that is primarily designed to be deployed into a kubernetes cluster to facilitate previewing and hosting of static websites built using a static site generator such as Jekyll, Hugo or Publish.
 
-- [x] Badges, CI/CD, Test infra, Code Coverage, license, Linting, precommit, Dockfile, basic cli app with test server with basic logging and metrics
+```mermaid
+graph  LR
+  client([browser])-..->ingress[Ingress];
+  webhook([git webhook])-..->hookingress[webhook receiver<BR>ingress];
+  ingress-->service[Service];
+  hookingress-->previewdservice
+  repo-->webhook
+  subgraph git
+  repo
+  end
+  subgraph cluster
+  hookingress;
+  ingress[Web<BR>frontend<BR>ingress];
+  previewdservice-->pod3[previewd<BR>jobmanager pod]
+  repo-..pull content..->pod3
+  pod3-->renderjob
+  renderjob[RenderJob<BR>Jekyll image]
+  pod3-->source
+  source-->renderjob
+  renderjob-->render
+  pod1-->render
+  pod2-->render
+  source[Source<BR>volume]
+  render[Render<BR>volume]
+  service-->pod1[nginx replica 1];
+  service-->pod2[inginx replica 2];
 
-# Okteto inner loop
+  end
+  classDef plain fill:#ddd,stroke:#fff,stroke-width:4px,color:#000;
+  classDef k8s fill:#326ce5,stroke:#fff,stroke-width:4px,color:#fff;
+  classDef cluster fill:#fff,stroke:#bbb,stroke-width:2px,color:#326ce5;
+  classDef volume fill:#fff,stroke:#bbb,stroke-width:2px,color:#326ce5;
+  class ingress,hookingress,service,pod1,pod2,pod3,previewdservice, k8s;
+  class client plain;
+  class cluster cluster;
+  class source volume
+  class render volume
+```
 
-- [x] k8s basic manifests that can set log level, verify on picluster, okteto manifests
+## Installation and use
 
-# Port webhook and dependencies from jekyllpreview prototype repo
+This project is still in development and as such we don't yet have instructions for how to use. That said you can build the code and run the tests. The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md)
 
-- [x] port all packages
-  - [x] JobManager
-  - [x] Kubelayer
-  - [x] local resource manager
-  - [x] port lrm to new logging
-  - [x] port kubelayer to new logging
-  - [x] port webhook listener
-  - [x] add logging and metrics to listener using middleware
-    - [x] workout how to bucket counters by successtype
-    - [x] Fix endpoint in duration
-    - [x] parameterize metrics names in middleware
-    - [x] Fix /metrics in testserver to hook in basicserver
-    - [x] Add logging and metrics to webhook
-    - [x] ensure test coverage for middleware
-- [x] Support out of cluster kubeconfig from file in tests
-  - [x] makefile integration tests using tags
-  - [x] k3s config checked in
-  - [x] NewJobManager works with file based config in tests
-  - [x] how to debug tests with tags
-  - [x] use strongbox to encrypt config
-  - [x] fix UT's in k3s
-- [x] Create missing tests
-  - [x] Pass in volumes, not hard coded
-  - [x] Rebuild find names functionality via a test
-  - [x] test mount volumes
-  - [x] test for find volume
-- [x] integration test that calls webhook job creation code that uses out of cluster mode based on main function
-  - [x] Create namespace imperitively
-  - [x] Create PersistentVolume and PersistentVolumeClaim imperitively
-  - [x] `TestCreateJobwithVolumes` test passes
-  - [x] end2end logic called from test: create temp volumes, clone, start webhook listener, fire webhook, render job created and succeeds, verify output volume contents
-- [x] MultiJob support
-  - [x] Test for multijob support one passing jobs
-  - [x] Test for multijob support two passing jobs
-  - [x] Test for multijob support failed job doesn't get deleted, halt all jobs due to locked volumes
-  - [x] Implement provider against actual k8s: TestCreateJobwithVolumes passes with multijob
-  - [x] Refactor JobManager to extract k8s specifics into kubesession; jobmanager uses a kubesession
-  - [x] Test for multijob support two passing jobs actual k8s
-- [ ] End to end test for webhook
-  - [x] Hook up clone only cmdline option (testprep)
-  - [x] Hook up initial render (no clone), webhook arg (e2etest)
-  - [x] verify exe
-  - [x] Prepare environment with PV populated from repo by creating job using previewd container from CI
-  - [ ] Make E2E test work
-  - [ ] e2e test works with okteto / minikube / kind in default namespace
+### Install Tools
 
-# End to end secenario for clone, webhook, render via job works from cmdline
+1. Install a recent version of golang, we recommend 1.17 or greater. [https://go.dev/doc/install](https://go.dev/doc/install)
+2. ensure that your path includes: `export PATH=$PATH:$HOME/go/bin` so that tools installed with `go install` work correctly
+3. Install `make` (debian linux: `sudo apt install make`)
+4. Install `gcc` (debian linux: `sudo apt install build-essential`)
+5. Install [`pre-commit`](https://pre-commit.com/) (debian linux: `sudo apt install precommit`)
+6. If you are planning on submitting a PR to this repo, install the git pre-commit hook (`pre-commit install`)
+7. Install [`shellcheck`](https://github.com/koalaman/shellcheck) (`sudo apt install shellcheck`)
+8. Install tools other golang based linting tools `make install-tools`
+9. Install [`k3s`](https://github.com/k3s-io/k3s) (`curl -sfL https://get.k3s.io | sh -`)
+10. If you are planning to use VSCode, ensure you have all of the golang tooling installed
 
-- [x] port main function from jekyllpreview prototype repo into cobra commands
-- [ ] test for webhook using curl
-- [ ] update readme to reflect how to run helloworld
+### Dev Setup
 
-# Integration tests run in Github Actions for PR's
+1. Configure environment variables in shell. There is a .env file in the scripts directory to establish environment variables needed for unit tests. These need to be applied in your shell and in vscode. You can add the following to your .bashrc or manually.
 
-- [ ] inegration test remainder
-  - [ ] Test for autodelete
-  - [ ] Run tests in default namespace for okteto compatibility
-  - [ ] All integration tests can be run via `make integration`
-- [ ] github action to configure okteto connection and call integration test using strongbox
-- [ ] can code coverage reflect integration test
-- [ ] verify metrics and logging in prom on k8s in okteto
+   ```bash
+   export $(cat scripts/.previewd_test.env | xargs)
+   ```
 
-# Port Preview server
+2. (optional) if you are planning to debug tests in vscode, you'll need to tell VScode about the environment variables and also enable integration tests. In VS code, go to the command palette and search for `Preferences: Open Remote settings (JSON)` and add the following snippet:
 
-- [ ] port sharemanager from jekyllpreview prototype repo
-- [ ] branch mode
-- [ ] end to end works in kind and or minikube
+   ```json
+   {
+     "go.buildFlags": ["-tags=unit,integration"],
+     "go.buildTags": "-tags=unit,integration",
+     "go.testTags": "-tags=unit,integration"
+   }
+   ```
 
-# Backlog
+   Then search for `User Settings` and add the following snippet for environment variables:
 
-- [ ] Badge for docker image build
-- [ ] Look at codecov as alternative for coverlet
-- [ ] precommit calls golangci-lint
-- [ ] add dev container
-- [ ] Test for multijob support failed job (eg due to can't bind PV) doesn't get deleted, halt all jobs due to locked volumes (ensure we can detect pending jobs due to unbound pvcs)
+   ```json
+   "go.testEnvFile": "/home/james/.previewd_test.env",
+   ```
+
+3. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
+
+### Build from Source
+
+To compile the main previewd executable:
+
+```bash
+make build
+```
+
+Which will produce a binary at <projectroot>/bin/previewd
+
+To build the docker container
+
+```bash
+docker build .
+```
+
+### Run tests
+
+This project comes with both unit and integration tests. Unit tests run standalone with no dependencies other than test environment configuration. Integration tests require a kubernetes cluster.
+
+For unit tests, use:
+
+```bash
+make test
+```
+
+For integration test, use:
+
+```bash
+make integration
+```
+
+TODO: run tests in VS (exports)

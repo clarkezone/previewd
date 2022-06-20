@@ -25,7 +25,7 @@ const (
 	renderPvName      = "render"
 	sourcePvName      = "source"
 	testNamespace     = "testns"
-	previewdImagePath = "registry.hub.docker.com/clarkezone/previewd:0.0.3"
+	previewdImagePath = "registry.hub.docker.com/clarkezone/previewd:0.0.4"
 	testRepo          = "https://github.com/clarkezone/selfhostinfrablog.git"
 )
 
