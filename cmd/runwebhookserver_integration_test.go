@@ -240,7 +240,8 @@ func getCompletionTrackingJobManager(t *testing.T) (*jobmanager.Jobmanager, *Com
 	if err != nil {
 		t.Fatalf("Can't create jobmanager %v", err)
 	}
-	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider.(jobmanager.Jobxxx), 120)
+	// Timeout of 14 minutes to match 15 minute timeout on integration tests in makefile
+	wrappedProvider := newCompletionTrackingJobManager(jm.JobProvider.(jobmanager.Jobxxx), 60*14)
 
 	jm.JobProvider = wrappedProvider
 
