@@ -59,7 +59,7 @@ This project is still in development and as such we don't yet have instructions 
 6. If you are planning on submitting a PR to this repo, install the git pre-commit hook (`pre-commit install`)
 7. Install [`shellcheck`](https://github.com/koalaman/shellcheck) (`sudo apt install shellcheck`)
 8. Install tools other golang based linting tools `make install-tools`
-9. Install [`k3s`](https://github.com/k3s-io/k3s) (`curl -sfL https://get.k3s.io | sh -`)
+9. Install [`k3s`](https://github.com/k3s-io/k3s) (`curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644`)
 10. If you are planning to use VSCode, ensure you have all of the golang tooling installed
 
 ### Dev Setup
@@ -86,7 +86,7 @@ This project is still in development and as such we don't yet have instructions 
    "go.testEnvFile": "/home/james/.previewd_test.env",
    ```
 
-3. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
+3. Edit `internal/testutils.go` and change the value returned by `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster (eg `~/.kube.config` in typical setups or `/etc/rancher/k3s/k3s.yaml` if you followed the instructions above and installed k3s)
 
 ### Build from Source
 
@@ -114,7 +114,7 @@ For unit tests, use:
 make test
 ```
 
-For integration test, use:
+For integration test, since these depend on having a valid k8s cluster to work properly, make sure you followed step 3 in the dev setup list above. Then use:
 
 ```bash
 make integration
