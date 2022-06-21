@@ -8,6 +8,9 @@ spec:
     matchLabels:
       app: previewdtest
   template:
+    metadata:
+      labels:
+        app: previewdtest
     spec:
       serviceAccountName: previewd-sa
       containers:
