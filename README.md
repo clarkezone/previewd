@@ -4,7 +4,7 @@
 
 ## Description
 
-`previewd` is a daemon that is primarily designed to be deployed into a kubernetes cluster to facilitate previewing and hosting of static websites built using a static site generator such as Jekyll, Hugo or Publish.
+`previewd` is a daemon that is designed to be deployed into a kubernetes cluster to facilitate previewing and hosting of static websites built using a static site generator such as Jekyll, Hugo or Publish.
 
 ```mermaid
 graph  LR
@@ -47,12 +47,15 @@ graph  LR
 
 ## Installation and use
 
-This project is still in development and as such we don't yet have instructions for how to use. That said you can build the code and run the tests. The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md)
+Previewd is currently at MVP level of maturity; the basic scenario is working as of release 0.4. Previewd can be deployed into a kubernetes cluster, will clone a static website source from github or gitea hosted site, perform an initial render by scheduling a kubernetes job, and will then listen for webhook triggered by a push to the repo. When the webhook is fired, a rebuild job will be scheduled. The resulting output can be hosted using an instance of Nginx. A set of sample manifests are included in the k8s directory of this repo. Instructions below show how these can be applied to play with the basic scenario.
+
+The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The current focus for the project is building out a production ready set of kubernetes manifests and infrastructure to enable selfhosting of a site leveraging previewd on a home cluster including metrics, monitoring, alerting and high availability. Once that step is complete, work will resume to start tackling the feature backlog.
 
 ### Clone a static website and render
 
 1. Apply manifests: `kubectl apply -f .`
 2. port-forward the ngnix container: `kubectl port-forward -n previewdtest pod/nginxdeployment-7f5454bbdb-gxc5n 8080:8080 --address=0.0.0.0`
+3. Point browser at exposed endpoint to view resulting website
 
 ### Trigger webhook
 
