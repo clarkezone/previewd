@@ -49,6 +49,20 @@ graph  LR
 
 This project is still in development and as such we don't yet have instructions for how to use. That said you can build the code and run the tests. The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md)
 
+### Clone a static website and render
+
+1. Apply manifests: `kubectl apply -f .`
+2. port-forward the ngnix container: `kubectl port-forward -n previewdtest pod/nginxdeployment-7f5454bbdb-gxc5n 8080:8080 --address=0.0.0.0`
+
+### Trigger webhook
+
+1. Port-forward webhook
+2. curl a thing
+
+### Using in production environment
+
+## Development Environment for previewd
+
 ### Install Tools
 
 1. Install a recent version of golang, we recommend 1.17 or greater. [https://go.dev/doc/install](https://go.dev/doc/install)
