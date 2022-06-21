@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginxdeployment
+  namespace: previewdtest
+spec:
+  selector:
+    matchLabels:
+      app: previewdtest
+  template:
+    spec:
+      serviceAccountName: previewd-sa
+      containers:
+        - name: blog-serve
+          image: nginx:1.20-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - mountPath: "/usr/share/nginx/html"
+              name: blogrender
+              readOnly: true
+            - mountPath: /etc/nginx/conf.d/default.conf
+              readOnly: true
+              name: nginxconfig
+              subPath: default.conf
+      volumes:
+        - name: blogrender
+          persistentVolumeClaim:
+            claimName: blogrender-pvc
+        - name: nginxconfig
+          configMap:
+            name: nginx-cm

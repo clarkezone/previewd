@@ -59,8 +59,16 @@ This project is still in development and as such we don't yet have instructions 
 6. If you are planning on submitting a PR to this repo, install the git pre-commit hook (`pre-commit install`)
 7. Install [`shellcheck`](https://github.com/koalaman/shellcheck) (`sudo apt install shellcheck`e
 8. Install tools other golang based linting tools `make install-tools`
-9. Unless you have access to an existing Kubernetes cluster with a default storage volume provider, install [`k3s`](https://github.com/k3s-io/k3s) (`curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644`) and then a block storage provider such as [`Longhorn`](https://longhorn.io/) (`kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.3.0/deploy/longhorn.yaml`). You will also need to install support for [rwx-workloads](https://longhorn.io/docs/1.2.4/advanced-resources/rwx-workloads/) on longhorn by way of installing nfs mounting tools (`apt install nfs-common`)
-10. If you are planning to use VSCode, ensure you have all of the golang tooling installed
+9. If you are planning to use VSCode, ensure you have all of the golang tooling installed
+
+### Install a k3s test cluster (optional, required to run tests and scenarios)
+
+Unless you have access to an existing Kubernetes test cluster with a default storage volume provider,
+
+1. Install [`k3s`](https://github.com/k3s-io/k3s): `curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644`
+2. Install a block storage provider such as [`Longhorn`](https://longhorn.io/): `kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.3.0/deploy/longhorn.yaml`.
+3. You will also need to install support for [rwx-workloads](https://longhorn.io/docs/1.2.4/advanced-resources/rwx-workloads/) on longhorn by way of installing nfs mounting tools: `apt install nfs-common`.
+4. Finally, ensure there is only one default storageclass (longhorn): `kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'`
 
 ### Dev Setup
 
