@@ -47,7 +47,7 @@ graph  LR
 
 ## Installation and use
 
-Previewd is currently at MVP level of maturity with the basic end-to-end scenario working as of release 0.4. Previewd can be deployed into a kubernetes cluster, will clone a static website source from github.com or a gitea repo, perform an initial markdown->html render by scheduling a [kubernetes job](https://kubernetes.io/docs/concepts/workloads/controllers/job), and will then listen for webhook triggered by a push to the repo. When the webhook fires, a rebuild job will be scheduled in the cluster. The resulting html output can be hosted using an instance of Nginx. A set of sample manifests are included in the k8s directory of this repo. Instructions below show how these can be applied to play with the basic scenario.
+Previewd is currently at MVP level of maturity with the basic end-to-end scenario working as of release 0.4. Previewd can be deployed into a kubernetes cluster, will clone a static website source from github.com or a [gitea](http://foo) repo, perform an initial markdown->html render by scheduling a [kubernetes job](https://kubernetes.io/docs/concepts/workloads/controllers/job), and will then listen for webhook triggered by a push to the repo. When the webhook fires, a rebuild job will be scheduled in the cluster. The resulting html output can be hosted using an instance of `nginx`. A set of sample manifests are included in the k8s directory of this repo. Instructions below show how these can be applied to play with the basic scenario.
 
 ```yaml
 apiVersion: apps/v1
@@ -95,6 +95,8 @@ The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The cur
 3. curl a thing
 
 ### Using in production environment
+
+TODO: coming soon
 
 ## Development Environment for previewd
 
