@@ -49,6 +49,37 @@ graph  LR
 
 Previewd is currently at MVP level of maturity with the basic end-to-end scenario working as of release 0.4. Previewd can be deployed into a kubernetes cluster, will clone a static website source from github.com or a gitea repo, perform an initial markdown->html render by scheduling a [kubernetes job](https://kubernetes.io/docs/concepts/workloads/controllers/job), and will then listen for webhook triggered by a push to the repo. When the webhook fires, a rebuild job will be scheduled in the cluster. The resulting html output can be hosted using an instance of Nginx. A set of sample manifests are included in the k8s directory of this repo. Instructions below show how these can be applied to play with the basic scenario.
 
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: previewdtestserver
+  name: previewdtestserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: previewdtestserver
+  template:
+    metadata:
+      labels:
+        app: previewdtestserver
+    spec:
+      containers:
+        - image: registry.hub.docker.com/clarkezone/previewd:0.0.4
+          imagePullPolicy: IfNotPresent
+          name: previewd
+          env:
+            - name: PORT
+              value: "8080"
+            - name: LOGLEVEL
+              value: "debug"
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+```
+
 The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The current focus for the project is building out a production ready set of kubernetes manifests and infrastructure to enable selfhosting of a site leveraging previewd on a home cluster including metrics, monitoring, alerting and high availability. Once that step is complete, work will resume to start tackling the feature backlog.
 
 ### Clone a static website and render
@@ -60,7 +91,8 @@ The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The cur
 ### Trigger webhook
 
 1. Port-forward webhook
-2. curl a thing
+2. In a separate window, start watching jobs: `kubectl get jobs -w`
+3. curl a thing
 
 ### Using in production environment
 
