@@ -53,31 +53,46 @@ Previewd is currently at MVP level of maturity with the basic end-to-end scenari
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: previewddeployment
+  namespace: previewdtest
   labels:
-    app: previewdtestserver
-  name: previewdtestserver
+    app: previewdtest
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: previewdtestserver
+      app: previewdtest
   template:
     metadata:
       labels:
-        app: previewdtestserver
+        app: previewdtest
     spec:
+      serviceAccountName: previewd-sa
       containers:
-        - image: registry.hub.docker.com/clarkezone/previewd:0.0.4
-          imagePullPolicy: IfNotPresent
-          name: previewd
+        - name: previewd-server
+          image: registry.hub.docker.com/clarkezone/previewd:0.0.4
+          imagePullPolicy: Always
+          args: ["runwebhookserver"]
           env:
-            - name: PORT
-              value: "8080"
+            - name: TARGETREPO
+              value: https://github.com/clarkezone/selfhostinfrablog.git
+            - name: LOCALDIR
+              value: /src
             - name: LOGLEVEL
-              value: "debug"
+              value: debug
+            - name: NAMESPACE
+              value: previewdtest
+          volumeMounts:
+            - mountPath: /src
+              name: blogsource
           ports:
-            - containerPort: 8080
-              protocol: TCP
+            - containerPort: 8090
+      volumes:
+        - name: blogsource
+          persistentVolumeClaim:
+            claimName: blogsource-pvc
+        - name: blogrender
+          persistentVolumeClaim:
+            claimName: blogrender-pvc
 ```
 
 The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The current focus for the project is building out a production ready set of kubernetes manifests and infrastructure to enable selfhosting of a site leveraging previewd on a home cluster including metrics, monitoring, alerting and high availability. Once that step is complete, work will resume to start tackling the feature backlog.
@@ -99,6 +114,8 @@ curl -X POST http://0.0.0.0:8081/postreceive \
    -H 'Content-Type: application/json' -H 'X-GitHub-Event: push' \
    -d @k8s/simple/webhooktest/webhook.json
 ```
+
+You should see
 
 ### Using in production environment
 
