@@ -92,7 +92,13 @@ The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The cur
 
 1. Port-forward webhook pod `kubectl port-forward -n previewdtest pod/previewddeployment-5fd9dfd86c-blzph 8081:8090 --address=0.0.0.0`
 2. In a separate window, start watching jobs: `kubectl get jobs -w`
-3. curl a thing
+3. Post dummy payload simulating a webhook firing:
+
+```sh
+curl -X POST http://0.0.0.0:8081/postreceive \
+   -H 'Content-Type: application/json' -H 'X-GitHub-Event: push' \
+   -d @k8s/simple/webhooktest/webhook.json
+```
 
 ### Using in production environment
 
