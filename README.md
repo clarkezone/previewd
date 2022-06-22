@@ -85,12 +85,12 @@ The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The cur
 ### Clone a static website and render
 
 1. Apply manifests: `kubectl apply -f .`
-2. port-forward the ngnix container: `kubectl port-forward -n previewdtest pod/nginxdeployment-7f5454bbdb-gxc5n 8080:8080 --address=0.0.0.0`
-3. Point browser at exposed endpoint to view resulting website
+2. port-forward the ngnix container: `kubectl port-forward -n previewdtest pod/nginxdeployment-7f5454bbdb-gxc5n 8080:80 --address=0.0.0.0`
+3. Point browser at exposed endpoint to view resulting website: e.g. `http://305.15.17.207:8080/`
 
 ### Trigger webhook
 
-1. Port-forward webhook
+1. Port-forward webhook pod `kubectl port-forward -n previewdtest pod/previewddeployment-5fd9dfd86c-blzph 8081:8090 --address=0.0.0.0`
 2. In a separate window, start watching jobs: `kubectl get jobs -w`
 3. curl a thing
 
