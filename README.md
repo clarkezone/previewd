@@ -115,7 +115,7 @@ curl -X POST http://0.0.0.0:8081/postreceive \
    -d @k8s/simple/webhooktest/webhook.json
 ```
 
-You should see
+You should see a job get created, proceed and be completed successfully indicating a re-fetch and render triggered by the simulated webhook.
 
 ### Using in production environment
 
