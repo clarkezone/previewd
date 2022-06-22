@@ -4,7 +4,7 @@
 
 ## Description
 
-`previewd` is a daemon that is primarily designed to be deployed into a kubernetes cluster to facilitate previewing and hosting of static websites built using a static site generator such as Jekyll, Hugo or Publish.
+`previewd` is a daemon that is designed to be deployed into a kubernetes cluster to facilitate previewing and hosting of static websites built using a static site generator such as Jekyll, Hugo or Publish.
 
 ```mermaid
 graph  LR
@@ -47,7 +47,81 @@ graph  LR
 
 ## Installation and use
 
-This project is still in development and as such we don't yet have instructions for how to use. That said you can build the code and run the tests. The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md)
+Previewd is currently at MVP level of maturity with the basic end-to-end scenario working as of release 0.4. Previewd can be deployed into a kubernetes cluster, will clone a static website source from github.com or a [gitea](http://foo) repo, perform an initial markdown->html render by scheduling a [kubernetes job](https://kubernetes.io/docs/concepts/workloads/controllers/job), and will then listen for webhook triggered by a push to the repo. When the webhook fires, a rebuild job will be scheduled in the cluster. The resulting html output can be hosted using an instance of `nginx`. A set of sample manifests are included in the k8s directory of this repo. Instructions below show how these can be applied to play with the basic scenario.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: previewddeployment
+  namespace: previewdtest
+  labels:
+    app: previewdtest
+spec:
+  selector:
+    matchLabels:
+      app: previewdtest
+  template:
+    metadata:
+      labels:
+        app: previewdtest
+    spec:
+      serviceAccountName: previewd-sa
+      containers:
+        - name: previewd-server
+          image: registry.hub.docker.com/clarkezone/previewd:0.0.4
+          imagePullPolicy: Always
+          args: ["runwebhookserver"]
+          env:
+            - name: TARGETREPO
+              value: https://github.com/clarkezone/selfhostinfrablog.git
+            - name: LOCALDIR
+              value: /src
+            - name: LOGLEVEL
+              value: debug
+            - name: NAMESPACE
+              value: previewdtest
+          volumeMounts:
+            - mountPath: /src
+              name: blogsource
+          ports:
+            - containerPort: 8090
+      volumes:
+        - name: blogsource
+          persistentVolumeClaim:
+            claimName: blogsource-pvc
+        - name: blogrender
+          persistentVolumeClaim:
+            claimName: blogrender-pvc
+```
+
+The backlog is maintained in [docs/workbacklog.md](docs/workbacklog.md). The current focus for the project is building out a production ready set of kubernetes manifests and infrastructure to enable selfhosting of a site leveraging previewd on a home cluster including metrics, monitoring, alerting and high availability. Once that step is complete, work will resume to start tackling the feature backlog.
+
+### Clone a static website and render
+
+1. Apply manifests: `kubectl apply -f .`
+2. port-forward the ngnix container: `kubectl port-forward -n previewdtest pod/nginxdeployment-7f5454bbdb-gxc5n 8080:80 --address=0.0.0.0`
+3. Point browser at exposed endpoint to view resulting website: e.g. `http://305.15.17.207:8080/`
+
+### Trigger webhook
+
+1. Port-forward webhook pod `kubectl port-forward -n previewdtest pod/previewddeployment-5fd9dfd86c-blzph 8081:8090 --address=0.0.0.0`
+2. In a separate window, start watching jobs: `kubectl get jobs -w`
+3. Post dummy payload simulating a webhook firing:
+
+```sh
+curl -X POST http://0.0.0.0:8081/postreceive \
+   -H 'Content-Type: application/json' -H 'X-GitHub-Event: push' \
+   -d @k8s/simple/webhooktest/webhook.json
+```
+
+You should see a job get created, proceed and be completed successfully indicating a re-fetch and render triggered by the simulated webhook.
+
+### Using in production environment
+
+TODO: coming soon
+
+## Development Environment for previewd
 
 ### Install Tools
 
@@ -57,10 +131,18 @@ This project is still in development and as such we don't yet have instructions 
 4. Install `gcc` (debian linux: `sudo apt install build-essential`)
 5. Install [`pre-commit`](https://pre-commit.com/) (debian linux: `sudo apt install precommit`)
 6. If you are planning on submitting a PR to this repo, install the git pre-commit hook (`pre-commit install`)
-7. Install [`shellcheck`](https://github.com/koalaman/shellcheck) (`sudo apt install shellcheck`)
+7. Install [`shellcheck`](https://github.com/koalaman/shellcheck) (`sudo apt install shellcheck`e
 8. Install tools other golang based linting tools `make install-tools`
-9. Install [`k3s`](https://github.com/k3s-io/k3s) (`curl -sfL https://get.k3s.io | sh -`)
-10. If you are planning to use VSCode, ensure you have all of the golang tooling installed
+9. If you are planning to use VSCode, ensure you have all of the golang tooling installed
+
+### Install a k3s test cluster (optional, required to run tests and scenarios)
+
+Unless you have access to an existing Kubernetes test cluster with a default storage volume provider,
+
+1. Install [`k3s`](https://github.com/k3s-io/k3s): `curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644`
+2. Install a block storage provider such as [`Longhorn`](https://longhorn.io/): `kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.3.0/deploy/longhorn.yaml`.
+3. You will also need to install support for [rwx-workloads](https://longhorn.io/docs/1.2.4/advanced-resources/rwx-workloads/) on longhorn by way of installing nfs mounting tools: `apt install nfs-common`.
+4. Finally, ensure there is only one default storageclass (longhorn): `kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'`
 
 ### Dev Setup
 
@@ -86,7 +168,7 @@ This project is still in development and as such we don't yet have instructions 
    "go.testEnvFile": "/home/james/.previewd_test.env",
    ```
 
-3. Update `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster
+3. Edit `internal/testutils.go` and change the value returned by `GetTestConfigPath()` to point to a valid kubeconfig for your test cluster (eg `~/.kube.config` in typical setups or `/etc/rancher/k3s/k3s.yaml` if you followed the instructions above and installed k3s)
 
 ### Build from Source
 
@@ -114,10 +196,16 @@ For unit tests, use:
 make test
 ```
 
-For integration test, use:
+For integration test, since these depend on having a valid k8s cluster to work properly, make sure you followed step 3 in the dev setup list above. Then use:
 
 ```bash
 make integration
+```
+
+Finally, for end-to-end tests that exercise the initial MVP
+
+```bash
+make end2end
 ```
 
 TODO: run tests in VS (exports)

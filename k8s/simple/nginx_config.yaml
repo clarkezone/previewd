@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-cm
+  namespace: previewdtest
+data:
+  default.conf:
+    "server {\n\tlisten \t\t80;\n\tlisten\t\t[::]:80;\n\n\tlocation /
+    {\n\t\troot\t/usr/share/nginx/html;\n\t\tindex\tindex.html index.htm;\n\t}\n}\n"
