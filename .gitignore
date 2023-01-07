@@ -2,6 +2,7 @@
 
 # IDEs
 .vscode
+*.swp
 
 # Golang binary
 cli
@@ -9,3 +10,5 @@ cli
 bin/*
 coverage.txt
 dist
+
+previewd

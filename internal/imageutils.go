@@ -14,6 +14,6 @@ func GetJekyllImage() string {
 // GetJekyllCommands returns the command and params used to trigger a render job
 func GetJekyllCommands() ([]string, []string) {
 	command := []string{"sh", "-c", "--"}
-	params := []string{"cd /src/source;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
+	params := []string{"cd /src/source;apk add build-base;bundle install;bundle exec jekyll build -d /site JEKYLL_ENV=production"}
 	return command, params
 }
